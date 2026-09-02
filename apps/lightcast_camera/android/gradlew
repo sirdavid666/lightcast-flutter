@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+set -eu
+GRADLE_VERSION="${LIGHTCAST_GRADLE_VERSION:-8.5}"
+CACHE_DIR="${GRADLE_USER_HOME:-$HOME/.gradle}/lightcast-distributions"
+GRADLE_HOME="$CACHE_DIR/gradle-$GRADLE_VERSION"
+if [ ! -x "$GRADLE_HOME/bin/gradle" ]; then
+  mkdir -p "$CACHE_DIR"
+  ARCHIVE="$CACHE_DIR/gradle-$GRADLE_VERSION-bin.zip"
+  if [ ! -f "$ARCHIVE" ]; then
+    curl --fail --location --silent --show-error \
+      "https://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip" \
+      --output "$ARCHIVE"
+  fi
+  rm -rf "$GRADLE_HOME"
+  unzip -q "$ARCHIVE" -d "$CACHE_DIR"
+fi
+exec "$GRADLE_HOME/bin/gradle" "$@"
