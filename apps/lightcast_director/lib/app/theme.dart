@@ -9,14 +9,14 @@ const lightcastBlue = Color(0xFF3B82F6);
 
 final lightcastTheme = ThemeData(
   brightness: Brightness.dark,
-  scaffoldBackgroundColor: Color(0xFF090B10),
+  scaffoldBackgroundColor: const Color(0xFF090B10),
   colorScheme: ColorScheme.fromSeed(
     seedColor: lightcastBlue,
     brightness: Brightness.dark,
-    surface: Color(0xFF151922),
+    surface: const Color(0xFF151922),
   ),
-  cardColor: Color(0xFF151922),
-  dividerColor: Color(0xFF2A3140),
+  cardColor: const Color(0xFF151922),
+  dividerColor: const Color(0xFF2A3140),
   inputDecorationTheme: const InputDecorationTheme(
     filled: true,
     fillColor: Color(0xFF202632),
