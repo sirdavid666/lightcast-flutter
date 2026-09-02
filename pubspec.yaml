@@ -1,0 +1,6 @@
+name: lightcast_workspace
+publish_to: "none"
+description: Android-first LightCast Flutter workspace.
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
