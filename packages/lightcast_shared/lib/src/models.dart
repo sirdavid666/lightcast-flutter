@@ -105,10 +105,10 @@ class CameraSource {
     required this.id,
     required this.label,
     required this.role,
-    this.status = 'connected',
+    this.status = 'offline',
     this.transport = 'mock',
-    this.batteryPercent = 84,
-    this.signalPercent = 92,
+    this.batteryPercent = -1,
+    this.signalPercent = -1,
   });
 
   final String id;
@@ -218,7 +218,6 @@ class LogoDraft {
   const LogoDraft({this.name = 'LIGHTCAST', this.opacity = 92});
   final String name;
   final int opacity;
-
   LogoDraft copyWith({String? name, int? opacity}) =>
       LogoDraft(name: name ?? this.name, opacity: opacity ?? this.opacity);
 }
@@ -228,10 +227,8 @@ class LowerThirdDraft {
     this.name = 'Pastor David',
     this.title = 'Senior Pastor',
   });
-
   final String name;
   final String title;
-
   LowerThirdDraft copyWith({String? name, String? title}) =>
       LowerThirdDraft(name: name ?? this.name, title: title ?? this.title);
 }
@@ -242,11 +239,9 @@ class CountdownDraft {
     this.mode = CountdownMode.corner,
     this.running = false,
   });
-
   final int seconds;
   final CountdownMode mode;
   final bool running;
-
   CountdownDraft copyWith({
     int? seconds,
     CountdownMode? mode,
