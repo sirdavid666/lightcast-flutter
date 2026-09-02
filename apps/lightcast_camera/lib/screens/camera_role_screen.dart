@@ -15,7 +15,9 @@ class CameraRoleScreen extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         child: Center(
-          child: ConstrainedBox(
+  // The child contains interactive role cards and cannot be const.
+  // ignore: prefer_const_constructors
+  child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
             child: Padding(
               padding: const EdgeInsets.all(28),
