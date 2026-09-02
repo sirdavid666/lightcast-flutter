@@ -1,0 +1,79 @@
+name: Build LightCast Android APKs
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.5"
+          channel: stable
+          cache: true
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Make Gradle bootstrap executable
+        run: chmod +x apps/lightcast_director/android/gradlew apps/lightcast_camera/android/gradlew
+
+      - name: Fetch shared package
+        working-directory: packages/lightcast_shared
+        run: flutter pub get
+
+      - name: Analyze shared package
+        working-directory: packages/lightcast_shared
+        run: dart analyze
+
+      - name: Fetch Director dependencies
+        working-directory: apps/lightcast_director
+        run: flutter pub get
+
+      - name: Analyze Director
+        working-directory: apps/lightcast_director
+        run: flutter analyze
+
+      - name: Test Director state
+        working-directory: apps/lightcast_director
+        run: flutter test
+
+      - name: Build Director APK
+        working-directory: apps/lightcast_director
+        run: flutter build apk --debug
+
+      - name: Rename Director APK
+        run: cp apps/lightcast_director/build/app/outputs/flutter-apk/app-debug.apk LightCast-Director.apk
+
+      - name: Fetch Camera dependencies
+        working-directory: apps/lightcast_camera
+        run: flutter pub get
+
+      - name: Analyze Camera
+        working-directory: apps/lightcast_camera
+        run: flutter analyze
+
+      - name: Build Camera APK
+        working-directory: apps/lightcast_camera
+        run: flutter build apk --debug
+
+      - name: Rename Camera APK
+        run: cp apps/lightcast_camera/build/app/outputs/flutter-apk/app-debug.apk LightCast-Camera.apk
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: lightcast-apks
+          path: |
+            LightCast-Director.apk
+            LightCast-Camera.apk
