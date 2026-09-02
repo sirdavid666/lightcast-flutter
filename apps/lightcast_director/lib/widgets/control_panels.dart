@@ -16,12 +16,10 @@ class PanelShell extends StatelessWidget {
 
 class CamerasPanel extends ConsumerWidget {
   const CamerasPanel({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
-
     return PanelShell(
       children: [
         const _PanelTitle('CAMERA LAYOUT'),
@@ -41,10 +39,30 @@ class CamerasPanel extends ConsumerWidget {
           (source) => ListTile(
             dense: true,
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.circle, color: Color(0xFF22C55E), size: 10),
+            leading: Icon(
+              Icons.circle,
+              color: source.status == 'connected'
+                  ? const Color(0xFF22C55E)
+                  : Colors.white24,
+              size: 10,
+            ),
             title: Text(source.label),
-            subtitle: Text('${source.transport.toUpperCase()} • ${source.signalPercent}% signal'),
-            trailing: Text('${source.batteryPercent}%'),
+            subtitle: Text(
+              source.status == 'connected'
+                  ? '${source.transport.toUpperCase()} • ${source.signalPercent}% signal'
+                  : 'OFFLINE • Pair camera to connect',
+            ),
+            trailing: Text(
+              source.status == 'connected'
+                  ? '${source.batteryPercent}%'
+                  : 'OFFLINE',
+              style: TextStyle(
+                color: source.status == 'connected'
+                    ? Colors.white
+                    : Colors.white38,
+                fontSize: 11,
+              ),
+            ),
           ),
         ),
       ],
@@ -54,12 +72,10 @@ class CamerasPanel extends ConsumerWidget {
 
 class LyricsPanel extends ConsumerWidget {
   const LyricsPanel({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
-
     return PanelShell(
       children: [
         const _PanelTitle('CURRENT SONG'),
@@ -90,12 +106,10 @@ class LyricsPanel extends ConsumerWidget {
 
 class ScripturePanel extends ConsumerWidget {
   const ScripturePanel({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
-
     return PanelShell(
       children: [
         const _PanelTitle('SCRIPTURE SEARCH'),
@@ -127,12 +141,10 @@ class ScripturePanel extends ConsumerWidget {
 
 class TickerPanel extends ConsumerWidget {
   const TickerPanel({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
-
     return PanelShell(
       children: [
         const _PanelTitle('TICKER DRAFT'),
@@ -162,12 +174,10 @@ class TickerPanel extends ConsumerWidget {
 
 class LogoPanel extends ConsumerWidget {
   const LogoPanel({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
-
     return PanelShell(
       children: [
         const _PanelTitle('CHURCH LOGO'),
@@ -190,12 +200,10 @@ class LogoPanel extends ConsumerWidget {
 
 class LowerThirdPanel extends ConsumerWidget {
   const LowerThirdPanel({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
-
     return PanelShell(
       children: [
         const _PanelTitle('SPEAKER TITLE'),
@@ -223,12 +231,10 @@ class LowerThirdPanel extends ConsumerWidget {
 
 class CountdownPanel extends ConsumerWidget {
   const CountdownPanel({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
-
     return PanelShell(
       children: [
         const _PanelTitle('COUNTDOWN'),
@@ -254,11 +260,9 @@ class CountdownPanel extends ConsumerWidget {
 
 class PipPanel extends ConsumerWidget {
   const PipPanel({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(productionProvider.notifier);
-
     return PanelShell(
       children: [
         const _PanelTitle('PIP POSITION'),
@@ -286,12 +290,10 @@ class PipPanel extends ConsumerWidget {
 
 class StreamingPanel extends ConsumerWidget {
   const StreamingPanel({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
-
     return PanelShell(
       children: [
         const _PanelTitle('FACEBOOK LIVE'),
@@ -320,7 +322,6 @@ class StreamingPanel extends ConsumerWidget {
 class _PanelTitle extends StatelessWidget {
   const _PanelTitle(this.text);
   final String text;
-
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
@@ -334,7 +335,6 @@ class _LayoutButton extends StatelessWidget {
   final CameraLayout layout;
   final CameraLayout selected;
   final void Function(CameraLayout) onTap;
-
   @override
   Widget build(BuildContext context) => ChoiceChip(
         label: Text(label),
@@ -348,7 +348,6 @@ class _ToggleAction extends StatelessWidget {
   final String label;
   final bool value;
   final ValueChanged<bool> onChanged;
-
   @override
   Widget build(BuildContext context) => SwitchListTile(
         dense: true,
