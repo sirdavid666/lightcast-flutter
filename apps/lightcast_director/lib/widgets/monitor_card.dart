@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:lightcast_shared/lightcast_shared.dart';
 import '../app/theme.dart';
+import '../state/director_providers.dart';
 
-class MonitorCard extends StatelessWidget {
+class MonitorCard extends ConsumerWidget {
   const MonitorCard({
     required this.title,
     required this.scene,
@@ -15,71 +18,83 @@ class MonitorCard extends StatelessWidget {
   final bool isProgram;
 
   @override
-  Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF11151D),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isProgram ? const Color(0xFF7F2028) : const Color(0xFF263247),
-            width: 1.5,
-          ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final webrtcRenderer = ref.watch(webrtcTransportProvider);
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF11151D),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isProgram ? const Color(0xFF7F2028) : const Color(0xFF263247),
+          width: 1.5,
         ),
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: isProgram ? const Color(0xFFEF4444) : lightcastBlue,
-                    shape: BoxShape.circle,
-                  ),
+      ),
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: isProgram ? const Color(0xFFEF4444) : lightcastBlue,
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.4,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
+              ),
               const SizedBox(width: 8),
-                Text(
-                  isProgram ? 'LIVE OUTPUT' : 'STAGED',
+              Expanded(
+                child: Text(
+                  title.toUpperCase(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: isProgram ? const Color(0xFFEF4444) : Colors.grey.shade600,
-                    fontSize: 9,
+                  style: const TextStyle(
                     fontWeight: FontWeight.w700,
+                    letterSpacing: 1.4,
+                    fontSize: 11,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SceneRenderer(scene: scene),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                isProgram ? 'LIVE OUTPUT' : 'STAGED',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isProgram ? const Color(0xFFEF4444) : Colors.grey.shade600,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SceneRenderer(
+                scene: scene,
+                webrtcRenderer: webrtcRenderer,
               ),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class SceneRenderer extends StatelessWidget {
-  const SceneRenderer({required this.scene, super.key});
+  const SceneRenderer({
+    required this.scene,
+    required this.webrtcRenderer,
+    super.key,
+  });
 
   final Scene scene;
+  final RTCVideoRenderer? webrtcRenderer;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -96,8 +111,11 @@ class SceneRenderer extends StatelessWidget {
                   left: constraints.maxWidth * frame.x,
                   top: constraints.maxHeight * frame.y,
                   width: constraints.maxWidth * frame.width,
-                  height: constraints.maxHeight * frame.height,
-                  child: _LayerView(layer: layer),
+                  height: constraints.maxHeight * layer.frame.height,
+                  child: _LayerView(
+                    layer: layer,
+                    webrtcRenderer: webrtcRenderer,
+                  ),
                 );
               }).toList(),
             ),
@@ -106,18 +124,30 @@ class SceneRenderer extends StatelessWidget {
       );
 }
 
-class _LayerView extends StatelessWidget {
-  const _LayerView({required this.layer});
+class _LayerView extends ConsumerWidget {
+  const _LayerView({
+    required this.layer,
+    required this.webrtcRenderer,
+  });
 
   final SceneLayer layer;
+  final RTCVideoRenderer? webrtcRenderer;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     switch (layer.kind) {
       case LayerKind.pastorVideo:
-        return const _MockFeed(label: 'PASTOR CAMERA', color: Color(0xFF18304F));
+        return _RealVideoFeed(
+          label: 'PASTOR CAMERA',
+          color: const Color(0xFF18304F),
+          renderer: webrtcRenderer,
+        );
       case LayerKind.crowdVideo:
-        return const _MockFeed(label: 'CROWD CAMERA', color: Color(0xFF49301C));
+        return _RealVideoFeed(
+          label: 'CROWD CAMERA',
+          color: const Color(0xFF49301C),
+          renderer: webrtcRenderer,
+        );
       case LayerKind.ticker:
         return _TickerOverlay(text: layer.payload['text'] as String?);
       case LayerKind.logo:
@@ -184,6 +214,32 @@ class _LayerView extends StatelessWidget {
   }
 }
 
+class _RealVideoFeed extends StatelessWidget {
+  const _RealVideoFeed({
+    required this.label,
+    required this.color,
+    required this.renderer,
+  });
+
+  final String label;
+  final Color color;
+  final RTCVideoRenderer? renderer;
+
+  @override
+  Widget build(BuildContext context) {
+    // If we have a real WebRTC stream, show it
+    if (renderer != null && renderer!.srcObject != null) {
+      return RTCVideoView(
+        renderer!,
+        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+      );
+    }
+    
+    // Otherwise show the mock feed
+    return _MockFeed(label: label, color: color);
+  }
+}
+
 class _MockFeed extends StatelessWidget {
   const _MockFeed({required this.label, required this.color});
 
@@ -228,7 +284,7 @@ class _MockFeed extends StatelessWidget {
               const FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  'MOCK SOURCE',
+                  'WAITING FOR CAMERA...',
                   maxLines: 1,
                   style: TextStyle(
                     color: Colors.white38,
