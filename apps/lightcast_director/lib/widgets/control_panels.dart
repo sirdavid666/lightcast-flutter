@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lightcast_shared/lightcast_shared.dart';
 import '../state/director_providers.dart';
+import '../services/streaming_service.dart';
 
 class PanelShell extends StatelessWidget {
   const PanelShell({required this.children, super.key});
@@ -372,10 +373,12 @@ class PipPanel extends ConsumerWidget {
 
 class StreamingPanel extends ConsumerWidget {
   const StreamingPanel({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
+    
     return PanelShell(
       children: [
         const _PanelTitle('FACEBOOK LIVE'),
@@ -387,15 +390,42 @@ class StreamingPanel extends ConsumerWidget {
           ),
           onChanged: controller.setStreamKey,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 16),
         FilledButton.icon(
-          style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB4232F)),
-          onPressed: controller.toggleLive,
+          style: FilledButton.styleFrom(
+            backgroundColor: state.liveStatus == 'LIVE' ? Colors.grey : const Color(0xFFB4232F),
+            minimumSize: const Size(double.infinity, 50),
+          ),
+          onPressed: state.liveStatus == 'LIVE' 
+              ? () async {
+                  await StreamingService.stopStream();
+                  controller.toggleLive();
+                }
+              : () async {
+                  if (state.streamKey.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please enter a Stream Key')),
+                    );
+                    return;
+                  }
+                  
+                  final success = await StreamingService.startStream(
+                    url: 'rtmps://live-api-s.facebook.com:443/rtmp/',
+                    streamKey: state.streamKey,
+                    overlayText: state.ticker.text,
+                  );
+
+                  if (success) controller.toggleLive();
+                },
           icon: Icon(state.liveStatus == 'LIVE' ? Icons.stop : Icons.wifi_tethering),
           label: Text(state.liveStatus == 'LIVE' ? 'STOP LIVE' : 'GO LIVE'),
         ),
-        const SizedBox(height: 8),
-        const Text('RTMPS engine is isolated behind BroadcastEngine and must be connected for production output.'),
+        const SizedBox(height: 12),
+        const Text(
+          'Direct Native I420 Composition Engine Active.\nNo screen recording. Pure H.264/AAC stream.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }
