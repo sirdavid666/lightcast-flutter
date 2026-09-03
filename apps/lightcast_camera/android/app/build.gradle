@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.lightcast.camera"
-    compileSdk = 36 // Changed from flutter.compileSdkVersion to fix flutter_webrtc error
+    compileSdkVersion 36 // Changed to compileSdkVersion for maximum compatibility
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -20,7 +20,7 @@ android {
     defaultConfig {
         applicationId = "com.lightcast.camera"
         minSdk = 24
-        targetSdk = 36 // Bumped to 36 to match compileSdk and prevent runtime warnings
+        targetSdkVersion 36 // Changed to targetSdkVersion for maximum compatibility
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
