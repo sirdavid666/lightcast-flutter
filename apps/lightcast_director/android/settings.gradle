@@ -1,9 +1,15 @@
 pluginManagement {
-    def flutterSdkPath = {
+    def flutterSdkPath = System.getenv("FLUTTER_HOME") ?: {
         def properties = new Properties()
-        file("local.properties").withInputStream { properties.load(it) }
+        def localPropertiesFile = file("local.properties")
+        if (localPropertiesFile.exists()) {
+            properties.load(localPropertiesFile.newDataInputStream())
+        }
         def flutterSdkPath = properties.getProperty("flutter.sdk")
-        assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+        if (flutterSdkPath == null) {
+            // Fallback for GitHub Actions
+            return "/opt/hostedtoolcache/flutter"
+        }
         return flutterSdkPath
     }()
 
