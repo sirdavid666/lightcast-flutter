@@ -17,7 +17,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-          # cache: gradle  <-- REMOVED THIS LINE TO FORCE FRESH DOWNLOAD
 
       - name: Set up Flutter 3.24.5
         uses: subosito/flutter-action@v2
@@ -30,17 +29,17 @@ jobs:
         working-directory: packages/lightcast_shared
         run: flutter pub get
 
+      - name: Clean Director old outputs
+        working-directory: apps/lightcast_director
+        run: flutter clean
+
       - name: Get Director dependencies
         working-directory: apps/lightcast_director
         run: flutter pub get
 
-      - name: Clean old outputs
-        working-directory: apps/lightcast_director
-        run: flutter clean
-
-      - name: Re-fetch dependencies after clean
-        working-directory: apps/lightcast_director
-        run: flutter pub get
+      - name: Verify Director Gradle version
+        working-directory: apps/lightcast_director/android
+        run: ./gradlew --version
 
       - name: Build Director APK
         working-directory: apps/lightcast_director
@@ -63,7 +62,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-          # cache: gradle  <-- REMOVED THIS LINE HERE TOO
 
       - name: Set up Flutter 3.24.5
         uses: subosito/flutter-action@v2
@@ -72,15 +70,11 @@ jobs:
           flutter-version: "3.24.5"
           cache: true
 
-      - name: Get Camera dependencies
-        working-directory: apps/lightcast_camera
-        run: flutter pub get
-
-      - name: Clean old outputs
+      - name: Clean Camera old outputs
         working-directory: apps/lightcast_camera
         run: flutter clean
 
-      - name: Re-fetch dependencies after clean
+      - name: Get Camera dependencies
         working-directory: apps/lightcast_camera
         run: flutter pub get
 
