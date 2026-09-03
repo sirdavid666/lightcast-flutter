@@ -2,13 +2,13 @@ name: lightcast_camera
 description: LightCast Pastor/Crowd camera Android application.
 publish_to: "none"
 version: 0.1.0+1
-
 environment:
   sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
+  camera: ^0.12.0+2
   flutter_riverpod: ^2.5.1
   lightcast_shared:
     path: ../../packages/lightcast_shared
