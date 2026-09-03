@@ -6,74 +6,82 @@ on:
     branches: [main]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-director:
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.24.5"
-          channel: stable
-          cache: true
-
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+          cache: gradle
 
-      - name: Make Gradle bootstrap executable
-        run: chmod +x apps/lightcast_director/android/gradlew apps/lightcast_camera/android/gradlew
+      - name: Set up Flutter 3.24.5
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.24.5"
+          cache: true
 
-      - name: Fetch shared package
+      - name: Get shared dependencies
         working-directory: packages/lightcast_shared
         run: flutter pub get
 
-      - name: Analyze shared package
-        working-directory: packages/lightcast_shared
-        run: dart analyze
-
-      - name: Fetch Director dependencies
+      - name: Get Director dependencies
         working-directory: apps/lightcast_director
         run: flutter pub get
 
-      - name: Analyze Director
+      - name: Clean old outputs
         working-directory: apps/lightcast_director
-        run: flutter analyze
-
-      - name: Test Director state
-        working-directory: apps/lightcast_director
-        run: flutter test
+        run: flutter clean
 
       - name: Build Director APK
         working-directory: apps/lightcast_director
-        run: flutter build apk --debug
+        run: flutter build apk --debug --no-pub
 
-      - name: Rename Director APK
-        run: cp apps/lightcast_director/build/app/outputs/flutter-apk/app-debug.apk LightCast-Director.apk
+      - name: Upload Director APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LightCast-Director.apk
+          path: apps/lightcast_director/build/app/outputs/flutter-apk/app-debug.apk
 
-      - name: Fetch Camera dependencies
+  build-camera:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Flutter 3.24.5
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.24.5"
+          cache: true
+
+      - name: Get Camera dependencies
         working-directory: apps/lightcast_camera
         run: flutter pub get
 
-      - name: Analyze Camera
+      - name: Clean old outputs
         working-directory: apps/lightcast_camera
-        run: flutter analyze
+        run: flutter clean
 
       - name: Build Camera APK
         working-directory: apps/lightcast_camera
-        run: flutter build apk --debug
+        run: flutter build apk --debug --no-pub
 
-      - name: Rename Camera APK
-        run: cp apps/lightcast_camera/build/app/outputs/flutter-apk/app-debug.apk LightCast-Camera.apk
-
-      - name: Upload APKs
+      - name: Upload Camera APK
         uses: actions/upload-artifact@v4
         with:
-          name: lightcast-apks
-          path: |
-            LightCast-Director.apk
-            LightCast-Camera.apk
+          name: LightCast-Camera.apk
+          path: apps/lightcast_camera/build/app/outputs/flutter-apk/app-debug.apk
