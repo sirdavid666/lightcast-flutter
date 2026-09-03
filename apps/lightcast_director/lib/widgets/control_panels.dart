@@ -70,12 +70,37 @@ class CamerasPanel extends ConsumerWidget {
   }
 }
 
-class LyricsPanel extends ConsumerWidget {
+class LyricsPanel extends ConsumerStatefulWidget {
   const LyricsPanel({super.key});
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LyricsPanel> createState() => _LyricsPanelState();
+}
+
+class _LyricsPanelState extends ConsumerState<LyricsPanel> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: ref.read(productionProvider).lyrics.text);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
+    
+    if (_controller.text != state.lyrics.text) {
+      _controller.text = state.lyrics.text;
+    }
+    
     return PanelShell(
       children: [
         const _PanelTitle('CURRENT SONG'),
@@ -88,7 +113,7 @@ class LyricsPanel extends ConsumerWidget {
         ),
         const SizedBox(height: 10),
         TextFormField(
-          initialValue: state.lyrics.text,
+          controller: _controller,
           maxLines: 2,
           decoration: const InputDecoration(labelText: 'Lyrics text'),
           onChanged: controller.setLyricsText,
@@ -104,17 +129,49 @@ class LyricsPanel extends ConsumerWidget {
   }
 }
 
-class ScripturePanel extends ConsumerWidget {
+class ScripturePanel extends ConsumerStatefulWidget {
   const ScripturePanel({super.key});
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ScripturePanel> createState() => _ScripturePanelState();
+}
+
+class _ScripturePanelState extends ConsumerState<ScripturePanel> {
+  late TextEditingController _referenceController;
+  late TextEditingController _textController;
+
+  @override
+  void initState() {
+    super.initState();
+    final state = ref.read(productionProvider);
+    _referenceController = TextEditingController(text: state.scripture.reference);
+    _textController = TextEditingController(text: state.scripture.text);
+  }
+
+  @override
+  void dispose() {
+    _referenceController.dispose();
+    _textController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
+    
+    if (_referenceController.text != state.scripture.reference) {
+      _referenceController.text = state.scripture.reference;
+    }
+    if (_textController.text != state.scripture.text) {
+      _textController.text = state.scripture.text;
+    }
+    
     return PanelShell(
       children: [
         const _PanelTitle('SCRIPTURE SEARCH'),
         TextFormField(
-          initialValue: state.scripture.reference,
+          controller: _referenceController,
           decoration: const InputDecoration(
             hintText: 'Search reference',
             prefixIcon: Icon(Icons.search),
@@ -123,7 +180,7 @@ class ScripturePanel extends ConsumerWidget {
         ),
         const SizedBox(height: 10),
         TextFormField(
-          initialValue: state.scripture.text,
+          controller: _textController,
           maxLines: 3,
           decoration: const InputDecoration(labelText: 'Displayed text'),
           onChanged: controller.setScriptureText,
@@ -139,17 +196,42 @@ class ScripturePanel extends ConsumerWidget {
   }
 }
 
-class TickerPanel extends ConsumerWidget {
+class TickerPanel extends ConsumerStatefulWidget {
   const TickerPanel({super.key});
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TickerPanel> createState() => _TickerPanelState();
+}
+
+class _TickerPanelState extends ConsumerState<TickerPanel> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: ref.read(productionProvider).ticker.text);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
+    
+    if (_controller.text != state.ticker.text) {
+      _controller.text = state.ticker.text;
+    }
+    
     return PanelShell(
       children: [
         const _PanelTitle('TICKER DRAFT'),
         TextFormField(
-          initialValue: state.ticker.text,
+          controller: _controller,
           maxLines: 2,
           decoration: const InputDecoration(labelText: 'Text (not live yet)'),
           onChanged: controller.setTickerText,
