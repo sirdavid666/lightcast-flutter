@@ -3,33 +3,38 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'signaling_server.dart';
 
 class DirectorWebRTCTransport {
-  RTCPeerConnection? _peerConnection;
-  final RTCVideoRenderer remoteRenderer = RTCVideoRenderer();
+  // Map to hold peer connections and renderers for each role
+  final Map<String, RTCPeerConnection> _peerConnections = {};
+  final Map<String, RTCVideoRenderer> _renderers = {};
   SignalingServer? _signalingServer;
-  bool _isConnected = false;
 
   DirectorWebRTCTransport();
 
   Future<void> initialize(SignalingServer signalingServer) async {
     _signalingServer = signalingServer;
-    await remoteRenderer.initialize();
-    
-    _peerConnection = await createPeerConnection({
+  }
+
+  Future<void> setupCamera(String role) async {
+    if (_renderers.containsKey(role)) return; // Already set up
+
+    final renderer = RTCVideoRenderer();
+    await renderer.initialize();
+    _renderers[role] = renderer;
+
+    final peerConnection = await createPeerConnection({
       'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}],
     }, {'mandatory': {}, 'optional': []});
 
-    // When the camera sends video, display it!
-    _peerConnection!.onTrack = (RTCTrackEvent event) {
+    peerConnection.onTrack = (RTCTrackEvent event) {
       if (event.streams.isNotEmpty) {
-        remoteRenderer.srcObject = event.streams[0];
-        _isConnected = true;
-        debugPrint('[DirectorWebRTC] ✅ Remote camera track received!');
+        renderer.srcObject = event.streams[0];
+        debugPrint('[DirectorWebRTC] ✅ Received $role camera track!');
       }
     };
 
-    _peerConnection!.onIceCandidate = (RTCIceCandidate candidate) {
+    peerConnection.onIceCandidate = (RTCIceCandidate candidate) {
       if (candidate.candidate != null && _signalingServer != null) {
-        _signalingServer!.sendCandidate({
+        _signalingServer!.sendCandidate(role, {
           'type': 'candidate',
           'candidate': {
             'candidate': candidate.candidate,
@@ -39,28 +44,35 @@ class DirectorWebRTCTransport {
         });
       }
     };
+
+    _peerConnections[role] = peerConnection;
   }
 
-  void handleOffer(Map<String, dynamic> data) async {
-    debugPrint('[DirectorWebRTC] Received offer, creating answer...');
-    await _peerConnection!.setRemoteDescription(
+  void handleOffer(String role, Map<String, dynamic> data) async {
+    debugPrint('[DirectorWebRTC] Received $role offer...');
+    final peerConnection = _peerConnections[role];
+    if (peerConnection == null) return;
+
+    await peerConnection.setRemoteDescription(
       RTCSessionDescription(data['sdp'], 'offer'),
     );
 
-    final answer = await _peerConnection!.createAnswer();
-    await _peerConnection!.setLocalDescription(answer);
+    final answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
 
-    // Send the answer back to the camera
     if (_signalingServer != null) {
-      _signalingServer!.sendAnswer({
+      _signalingServer!.sendAnswer(role, {
         'type': 'answer',
         'sdp': answer.sdp,
       });
     }
   }
 
-  void handleCandidate(Map<String, dynamic> data) async {
-    await _peerConnection!.addCandidate(
+  void handleCandidate(String role, Map<String, dynamic> data) async {
+    final peerConnection = _peerConnections[role];
+    if (peerConnection == null) return;
+
+    await peerConnection.addCandidate(
       RTCIceCandidate(
         data['candidate']['candidate'],
         data['candidate']['sdpMid'],
@@ -69,11 +81,15 @@ class DirectorWebRTCTransport {
     );
   }
 
-  RTCVideoRenderer get renderer => remoteRenderer;
-  bool get isConnected => _isConnected;
+  RTCVideoRenderer? getRenderer(String role) => _renderers[role];
+  bool isConnected(String role) => _renderers[role]?.srcObject != null;
 
   Future<void> dispose() async {
-    await _peerConnection?.close();
-    await remoteRenderer.dispose();
+    for (var pc in _peerConnections.values) {
+      await pc.close();
+    }
+    for (var renderer in _renderers.values) {
+      await renderer.dispose();
+    }
   }
 }
