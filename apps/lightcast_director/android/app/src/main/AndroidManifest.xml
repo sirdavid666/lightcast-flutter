@@ -7,8 +7,11 @@
     <application
         android:label="Lightcast"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="false">
+        android:icon="@android:drawable/ic_menu_camera"
+        android:usesCleartextTraffic="false"
+        android:hardwareAccelerated="true"
+        android:allowBackup="false"
+        android:supportsRtl="true">
         
         <activity
             android:name=".MainActivity"
@@ -24,6 +27,14 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- REQUIRED: This allows the native streaming engine to run in the background -->
+        <service
+            android:name=".streaming.StreamingService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="microphone" />
+
         <meta-data android:name="flutterEmbedding" android:value="2" />
     </application>
 </manifest>
