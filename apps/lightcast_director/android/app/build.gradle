@@ -1,3 +1,22 @@
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader("UTF-8") { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty("flutter.versionCode")
+if (flutterVersionCode == null) {
+    flutterVersionCode = "1"
+}
+
+def flutterVersionName = localProperties.getProperty("flutter.versionName")
+if (flutterVersionName == null) {
+    flutterVersionName = "1.0"
+}
+
 plugins {
     id "com.android.application"
     id "org.jetbrains.kotlin.android"
@@ -5,44 +24,42 @@ plugins {
 }
 
 android {
-    namespace "com.lightcast"
-    compileSdk 35  // Updated from 34 to 35 for RootEncoder
-    ndkVersion flutter.ndkVersion
+    namespace = "com.lightcast"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
-    }
-
-    sourceSets {
-        main.java.srcDirs += 'src/main/kotlin'
+        jvmTarget = "17"
     }
 
     defaultConfig {
-        applicationId "com.lightcast"
-        minSdk 24
-        targetSdk 35  // Updated from 34 to 35
-        versionCode flutter.versionCode
-        versionName flutter.versionName
-        multiDexEnabled true
+        applicationId = "com.lightcast"
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutterVersionCode.toInteger()
+        versionName = flutterVersionName
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig = signingConfigs.debug
         }
     }
 }
 
+kotlin {
+    jvmToolchain(17)
+}
+
 flutter {
-    source '../..'
+    source = "../.."
 }
 
 dependencies {
-    implementation 'com.github.pedroSG94.RootEncoder:library:2.8.1'
-    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation "com.github.pedroSG94.RootEncoder:library:2.8.1"
 }
