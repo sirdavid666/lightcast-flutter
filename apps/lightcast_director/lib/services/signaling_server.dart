@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart'; // Added this import
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_web_socket/shelf_web_socket.dart';
@@ -21,12 +22,12 @@ class SignalingServer {
     final handler = const Pipeline().addHandler(
       webSocketHandler((webSocket) {
         _cameraChannel = webSocket;
-        print('[SignalingServer] 📱 Camera connected!');
+        debugPrint('[SignalingServer] 📱 Camera connected!');
 
         webSocket.stream.listen((message) {
           try {
             final data = jsonDecode(message);
-            print('[SignalingServer] Received: ${data['type']}');
+            debugPrint('[SignalingServer] Received: ${data['type']}');
 
             if (data['type'] == 'offer') {
               onOfferReceived(data);
@@ -34,23 +35,23 @@ class SignalingServer {
               onCandidateReceived(data);
             }
           } catch (e) {
-            print('[SignalingServer] Error parsing message: $e');
+            debugPrint('[SignalingServer] Error parsing message: $e');
           }
         }, onDone: () {
-          print('[SignalingServer] Camera disconnected');
+          debugPrint('[SignalingServer] Camera disconnected');
           _cameraChannel = null;
         });
       }),
     );
 
     _server = await io.serve(handler, '0.0.0.0', 8080);
-    print('[SignalingServer] 🟢 Listening for cameras on port ${_server!.port}');
+    debugPrint('[SignalingServer] 🟢 Listening for cameras on port ${_server!.port}');
   }
 
   void sendAnswer(Map<String, dynamic> answer) {
     if (_cameraChannel != null) {
       _cameraChannel!.sink.add(jsonEncode(answer));
-      print('[SignalingServer] Sent answer to camera');
+      debugPrint('[SignalingServer] Sent answer to camera');
     }
   }
 
@@ -63,6 +64,6 @@ class SignalingServer {
   Future<void> stop() async {
     await _cameraChannel?.sink.close();
     await _server?.close();
-    print('[SignalingServer] Stopped');
+    debugPrint('[SignalingServer] Stopped');
   }
 }
