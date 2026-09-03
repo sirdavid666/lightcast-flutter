@@ -18,7 +18,6 @@ Future<void> main() async {
 
   // 1. Initialize the WebRTC receiver
   directorTransport = DirectorWebRTCTransport();
-  await directorTransport.initialize();
 
   // 2. Start the local signaling server on port 8080
   signalingServer = SignalingServer(
@@ -26,6 +25,9 @@ Future<void> main() async {
     onCandidateReceived: directorTransport.handleCandidate,
   );
   await signalingServer.start();
+  
+  // 3. Initialize the transport with the signaling server
+  await directorTransport.initialize(signalingServer);
 
   runApp(const DirectorApp());
 }
