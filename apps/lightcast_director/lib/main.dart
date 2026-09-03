@@ -28,6 +28,10 @@ Future<void> main() async {
   
   // 3. Initialize the transport with the signaling server
   await directorTransport.initialize(signalingServer);
+  
+  // 4. Setup both camera slots (Pastor and Crowd)
+  await directorTransport.setupCamera('pastor');
+  await directorTransport.setupCamera('crowd');
 
   runApp(const DirectorApp());
 }
