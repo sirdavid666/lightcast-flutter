@@ -8,7 +8,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_webrtc: ^1.6.1
+  flutter_webrtc: ^0.11.6 # Downgraded to stable version to fix SDK 36 compile error
   flutter_riverpod: ^2.5.1
   lightcast_shared:
     path: ../../packages/lightcast_shared
