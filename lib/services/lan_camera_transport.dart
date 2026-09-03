@@ -6,13 +6,12 @@ class LanCameraTransport {
   final String role;
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
-  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
+  final RTCVideoRenderer localRenderer = RTCVideoRenderer();
   String? _directorIp;
   bool _isRunning = false;
 
   LanCameraTransport({required this.role});
 
-  RTCVideoRenderer get localRenderer => _localRenderer;
   bool get isRunning => _isRunning;
 
   Future<void> start(String directorIp) async {
@@ -24,10 +23,8 @@ class LanCameraTransport {
     _directorIp = directorIp;
     debugPrint('[LanCameraTransport] Starting for role: $role, Director: $_directorIp');
 
-    // Initialize renderer
-    await _localRenderer.initialize();
+    await localRenderer.initialize();
 
-    // Get camera stream
     final Map<String, dynamic> mediaConstraints = {
       'audio': true,
       'video': {
@@ -38,9 +35,8 @@ class LanCameraTransport {
     };
 
     _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
-    _localRenderer.srcObject = _localStream;
+    localRenderer.srcObject = _localStream;
 
-    // Create WebRTC peer connection
     _peerConnection = await createPeerConnection({
       'iceServers': [
         {'urls': 'stun:stun.l.google.com:19302'},
@@ -50,12 +46,10 @@ class LanCameraTransport {
       'optional': [],
     });
 
-    // Add local stream tracks
     _localStream!.getTracks().forEach((track) {
       _peerConnection!.addTrack(track, _localStream!);
     });
 
-    // Create offer for WebRTC connection
     final offer = await _peerConnection!.createOffer({
       'offerToReceiveVideo': 1,
       'offerToReceiveAudio': 1,
@@ -63,8 +57,6 @@ class LanCameraTransport {
 
     await _peerConnection!.setLocalDescription(offer);
 
-    // TODO: Send offer to Director via signaling server
-    // For now, we'll simulate connection
     debugPrint('[LanCameraTransport] WebRTC offer created, waiting for signaling...');
     
     _isRunning = true;
@@ -77,7 +69,7 @@ class LanCameraTransport {
     _localStream?.getTracks().forEach((track) => track.stop());
     await _localStream?.dispose();
     await _peerConnection?.close();
-    await _localRenderer.dispose();
+    await localRenderer.dispose();
     
     _localStream = null;
     _peerConnection = null;
