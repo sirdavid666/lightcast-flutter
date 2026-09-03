@@ -37,6 +37,10 @@ jobs:
         working-directory: apps/lightcast_director
         run: flutter pub get
 
+      - name: Make gradlew executable
+        working-directory: apps/lightcast_director/android
+        run: chmod +x gradlew
+
       - name: Verify Director Gradle version
         working-directory: apps/lightcast_director/android
         run: ./gradlew --version
