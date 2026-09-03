@@ -17,7 +17,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
+          # cache: gradle  <-- REMOVED THIS LINE TO FORCE FRESH DOWNLOAD
 
       - name: Set up Flutter 3.24.5
         uses: subosito/flutter-action@v2
@@ -63,7 +63,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
+          # cache: gradle  <-- REMOVED THIS LINE HERE TOO
 
       - name: Set up Flutter 3.24.5
         uses: subosito/flutter-action@v2
