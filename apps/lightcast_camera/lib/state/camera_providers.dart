@@ -38,6 +38,10 @@ class CameraController extends StateNotifier<CameraState> {
 
   void selectRole(CameraRole role) => state = state.copyWith(role: role);
   void clearRole() => state = const CameraState();
+  
+  // ✅ ADDED: This is what camera_role_screen.dart is trying to call
+  void setConnected(bool value) => state = state.copyWith(connected: value);
+  
   void toggleConnection() => state = state.copyWith(connected: !state.connected);
 
   CameraSource get source => CameraSource(
