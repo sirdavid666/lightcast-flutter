@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace "com.lightcast"
-    compileSdk 34
+    compileSdk 35  // Updated from 34 to 35 for RootEncoder
     ndkVersion flutter.ndkVersion
 
     compileOptions {
@@ -25,7 +25,7 @@ android {
     defaultConfig {
         applicationId "com.lightcast"
         minSdk 24
-        targetSdk 34
+        targetSdk 35  // Updated from 34 to 35
         versionCode flutter.versionCode
         versionName flutter.versionName
         multiDexEnabled true
