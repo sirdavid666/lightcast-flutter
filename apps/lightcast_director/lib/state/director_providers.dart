@@ -1,5 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:lightcast_shared/lightcast_shared.dart';
+
+// Provider to access the WebRTC transport from main.dart
+final webrtcTransportProvider = Provider<RTCVideoRenderer?>((ref) => null);
 
 final productionProvider =
     StateNotifierProvider<ProductionController, ProductionState>(
