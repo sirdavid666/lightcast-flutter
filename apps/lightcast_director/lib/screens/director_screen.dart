@@ -5,6 +5,7 @@ import '../app/theme.dart';
 import '../state/director_providers.dart';
 import '../widgets/control_panels.dart';
 import '../widgets/monitor_card.dart';
+import '../main.dart' show directorTransport;
 
 class DirectorScreen extends ConsumerWidget {
   const DirectorScreen({super.key});
@@ -25,8 +26,33 @@ class DirectorScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
+    
+    // Provide the WebRTC renderer to the widget tree
+    return ProviderScope(
+      overrides: [
+        webrtcTransportProvider.overrideWithValue(directorTransport.renderer),
+      ],
+      child: _DirectorScreenContent(
+        state: state,
+        controller: controller,
+      ),
+    );
+  }
+}
+
+class _DirectorScreenContent extends StatelessWidget {
+  const _DirectorScreenContent({
+    required this.state,
+    required this.controller,
+  });
+
+  final ProductionState state;
+  final ProductionController controller;
+
+  @override
+  Widget build(BuildContext context) {
     return DefaultTabController(
-      length: panelNames.length,
+      length: DirectorScreen.panelNames.length,
       child: Scaffold(
         appBar: AppBar(
           title: Row(
@@ -41,7 +67,11 @@ class DirectorScreen extends ConsumerWidget {
           actions: [
             _StatusPill(label: state.liveStatus, live: state.liveStatus == 'LIVE'),
             const SizedBox(width: 12),
-            const Icon(Icons.wifi, color: Color(0xFF22C55E), size: 18),
+            Icon(
+              directorTransport.isConnected ? Icons.wifi : Icons.wifi_off,
+              color: directorTransport.isConnected ? const Color(0xFF22C55E) : Colors.orange,
+              size: 18,
+            ),
             const SizedBox(width: 18),
           ],
         ),
@@ -53,7 +83,7 @@ class DirectorScreen extends ConsumerWidget {
               onTake: controller.take,
             );
             final controls = _Controls(
-              onTab: (index) => controller.setPanel(panelNames[index]),
+              onTab: (index) => controller.setPanel(DirectorScreen.panelNames[index]),
             );
             return Padding(
               padding: const EdgeInsets.all(14),
