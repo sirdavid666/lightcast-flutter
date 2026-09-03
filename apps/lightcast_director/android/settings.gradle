@@ -28,8 +28,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        
-        // JitPack for RootEncoder
         maven { url 'https://jitpack.io' }
     }
 }
