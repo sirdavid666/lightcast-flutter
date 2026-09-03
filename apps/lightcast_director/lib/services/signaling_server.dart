@@ -26,8 +26,11 @@ class SignalingServer {
           try {
             final data = jsonDecode(message);
             debugPrint('[SignalingServer] Received from $role: ${data['type']}');
-            if (data['type'] == 'offer') onOfferReceived(role, data);
-            else if (data['type'] == 'candidate') onCandidateReceived(role, data);
+            if (data['type'] == 'offer') {
+              onOfferReceived(role, data);
+            } else if (data['type'] == 'candidate') {
+              onCandidateReceived(role, data);
+            }
           } catch (e) {
             debugPrint('[SignalingServer] Error parsing message: $e');
           }
@@ -55,7 +58,9 @@ class SignalingServer {
   }
 
   Future<void> stop() async {
-    for (var channel in _channels.values) { await channel.sink.close(); }
+    for (var channel in _channels.values) {
+      await channel.sink.close();
+    }
     await _server?.close();
   }
 }
