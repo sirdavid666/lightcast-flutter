@@ -5,7 +5,6 @@ import '../app/theme.dart';
 import '../state/director_providers.dart';
 import '../widgets/control_panels.dart';
 import '../widgets/monitor_card.dart';
-import '../main.dart' show directorTransport;
 
 class DirectorScreen extends ConsumerWidget {
   const DirectorScreen({super.key});
@@ -29,8 +28,9 @@ class DirectorScreen extends ConsumerWidget {
     
     return ProviderScope(
       overrides: [
-        // Show Pastor camera for now. We will upgrade this to switch layouts later.
-        webrtcTransportProvider.overrideWithValue(directorTransport.getRenderer('pastor')),
+        // Since Kotlin handles WebRTC, we show a null renderer (black screen)
+        // The actual video is being processed natively for streaming
+        webrtcTransportProvider.overrideWithValue(null),
       ],
       child: _DirectorScreenContent(state: state, controller: controller),
     );
@@ -61,11 +61,7 @@ class _DirectorScreenContent extends StatelessWidget {
           actions: [
             _StatusPill(label: state.liveStatus, live: state.liveStatus == 'LIVE'),
             const SizedBox(width: 12),
-            Icon(
-              directorTransport.isConnected('pastor') ? Icons.wifi : Icons.wifi_off,
-              color: directorTransport.isConnected('pastor') ? const Color(0xFF22C55E) : Colors.orange,
-              size: 18,
-            ),
+            const Icon(Icons.wifi, color: Color(0xFF22C55E), size: 18),
             const SizedBox(width: 18),
           ],
         ),
