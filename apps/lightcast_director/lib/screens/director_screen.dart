@@ -27,24 +27,18 @@ class DirectorScreen extends ConsumerWidget {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
     
-    // Provide the WebRTC renderer to the widget tree
     return ProviderScope(
       overrides: [
-        webrtcTransportProvider.overrideWithValue(directorTransport.renderer),
+        // Show Pastor camera for now. We will upgrade this to switch layouts later.
+        webrtcTransportProvider.overrideWithValue(directorTransport.getRenderer('pastor')),
       ],
-      child: _DirectorScreenContent(
-        state: state,
-        controller: controller,
-      ),
+      child: _DirectorScreenContent(state: state, controller: controller),
     );
   }
 }
 
 class _DirectorScreenContent extends StatelessWidget {
-  const _DirectorScreenContent({
-    required this.state,
-    required this.controller,
-  });
+  const _DirectorScreenContent({required this.state, required this.controller});
 
   final ProductionState state;
   final ProductionController controller;
@@ -68,8 +62,8 @@ class _DirectorScreenContent extends StatelessWidget {
             _StatusPill(label: state.liveStatus, live: state.liveStatus == 'LIVE'),
             const SizedBox(width: 12),
             Icon(
-              directorTransport.isConnected ? Icons.wifi : Icons.wifi_off,
-              color: directorTransport.isConnected ? const Color(0xFF22C55E) : Colors.orange,
+              directorTransport.isConnected('pastor') ? Icons.wifi : Icons.wifi_off,
+              color: directorTransport.isConnected('pastor') ? const Color(0xFF22C55E) : Colors.orange,
               size: 18,
             ),
             const SizedBox(width: 18),
@@ -78,31 +72,13 @@ class _DirectorScreenContent extends StatelessWidget {
         body: LayoutBuilder(
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= 700;
-            final monitors = _Monitors(
-              state: state,
-              onTake: controller.take,
-            );
-            final controls = _Controls(
-              onTab: (index) => controller.setPanel(DirectorScreen.panelNames[index]),
-            );
+            final monitors = _Monitors(state: state, onTake: controller.take);
+            final controls = _Controls(onTab: (index) => controller.setPanel(DirectorScreen.panelNames[index]));
             return Padding(
               padding: const EdgeInsets.all(14),
               child: wide
-                  ? Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(child: monitors),
-                        const SizedBox(width: 14),
-                        SizedBox(width: 360, child: controls),
-                      ],
-                    )
-                  : Column(
-                      children: [
-                        SizedBox(height: 430, child: monitors),
-                        const SizedBox(height: 12),
-                        SizedBox(height: 330, child: controls),
-                      ],
-                    ),
+                  ? Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(child: monitors), const SizedBox(width: 14), SizedBox(width: 360, child: controls)])
+                  : Column(children: [SizedBox(height: 430, child: monitors), const SizedBox(height: 12), SizedBox(height: 330, child: controls)]),
             );
           },
         ),
@@ -135,11 +111,7 @@ class _Monitors extends StatelessWidget {
                         SizedBox(
                           height: 76,
                           child: FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: lightcastBlue,
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
+                            style: FilledButton.styleFrom(backgroundColor: lightcastBlue, padding: const EdgeInsets.symmetric(horizontal: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                             onPressed: onTake,
                             child: const Text('TAKE', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
                           ),
@@ -156,25 +128,12 @@ class _Monitors extends StatelessWidget {
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF151922),
-              borderRadius: BorderRadius.circular(10),
-            ),
+            decoration: BoxDecoration(color: const Color(0xFF151922), borderRadius: BorderRadius.circular(10)),
             child: Row(
               children: [
                 const Icon(Icons.info_outline, size: 16, color: Colors.white38),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Edits are staged in Preview. TAKE publishes the complete scene.',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
+                Expanded(child: Text('Edits are staged in Preview. TAKE publishes the complete scene.', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey.shade400, fontSize: 12))),
               ],
             ),
           ),
@@ -188,35 +147,11 @@ class _Controls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF151922),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF252C3A)),
-        ),
+        decoration: BoxDecoration(color: const Color(0xFF151922), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF252C3A))),
         child: Column(
           children: [
-            TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              labelPadding: const EdgeInsets.symmetric(horizontal: 12),
-              onTap: onTab,
-              tabs: DirectorScreen.panelNames.map((name) => Tab(text: name)).toList(),
-            ),
-            const Expanded(
-              child: TabBarView(
-                children: [
-                  CamerasPanel(),
-                  LyricsPanel(),
-                  ScripturePanel(),
-                  TickerPanel(),
-                  LogoPanel(),
-                  LowerThirdPanel(),
-                  CountdownPanel(),
-                  PipPanel(),
-                  StreamingPanel(),
-                ],
-              ),
-            ),
+            TabBar(isScrollable: true, tabAlignment: TabAlignment.start, labelPadding: const EdgeInsets.symmetric(horizontal: 12), onTap: onTab, tabs: DirectorScreen.panelNames.map((name) => Tab(text: name)).toList()),
+            const Expanded(child: TabBarView(children: [CamerasPanel(), LyricsPanel(), ScripturePanel(), TickerPanel(), LogoPanel(), LowerThirdPanel(), CountdownPanel(), PipPanel(), StreamingPanel()])),
           ],
         ),
       );
@@ -229,18 +164,7 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: live ? const Color(0x332EF06B) : const Color(0x332B3545),
-          borderRadius: BorderRadius.circular(5),
-        ),
-        child: Text(
-          live ? '● $label' : label,
-          style: TextStyle(
-            color: live ? const Color(0xFF4ADE80) : Colors.grey.shade400,
-            fontWeight: FontWeight.w800,
-            fontSize: 10,
-            letterSpacing: 1,
-          ),
-        ),
+        decoration: BoxDecoration(color: live ? const Color(0x332EF06B) : const Color(0x332B3545), borderRadius: BorderRadius.circular(5)),
+        child: Text(live ? '● $label' : label, style: TextStyle(color: live ? const Color(0xFF4ADE80) : Colors.grey.shade400, fontWeight: FontWeight.w800, fontSize: 10, letterSpacing: 1)),
       );
 }
