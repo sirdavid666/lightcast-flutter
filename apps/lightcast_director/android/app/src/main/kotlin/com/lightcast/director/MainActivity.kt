@@ -1,4 +1,4 @@
-package com.lightcast
+package com.lightcast.director
 
 import android.Manifest
 import android.content.pm.PackageManager
