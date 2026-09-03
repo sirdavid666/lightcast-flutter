@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 class StreamingService {
@@ -8,7 +9,7 @@ class StreamingService {
       final result = await _channel.invokeMethod<String>('handleOffer', {'sdp': sdp});
       return result;
     } catch (e) {
-      print('WebRTC Offer Error: $e');
+      debugPrint('WebRTC Offer Error: $e');
       return null;
     }
   }
@@ -26,7 +27,7 @@ class StreamingService {
       });
       return true;
     } catch (e) {
-      print('Streaming error: $e');
+      debugPrint('Streaming error: $e');
       return false;
     }
   }
