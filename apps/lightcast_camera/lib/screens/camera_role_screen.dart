@@ -4,8 +4,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:camera/camera.dart' as camera;
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../state/camera_providers.dart';
+import '../services/lan_camera_transport.dart';
 
 class CameraRoleScreen extends ConsumerWidget {
   const CameraRoleScreen({super.key});
@@ -118,72 +119,64 @@ class CameraPreviewScreen extends ConsumerStatefulWidget {
 
 class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
     with WidgetsBindingObserver {
-  camera.CameraController? _cameraController;
+  LanCameraTransport? _transport;
   String? _cameraError;
+  final _directorIpController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initializeCamera();
+    _directorIpController.text = '192.168.1.100';
   }
 
-  Future<void> _initializeCamera() async {
+  Future<void> _connectToDirector() async {
     try {
-      final cameras = await camera.availableCameras();
-      if (cameras.isEmpty) {
-        if (mounted) {
-          setState(() => _cameraError = 'No camera was found on this phone.');
-        }
-        return;
-      }
-
-      final selected = cameras.firstWhere(
-        (item) => item.lensDirection == camera.CameraLensDirection.back,
-        orElse: () => cameras.first,
-      );
-      final controller = camera.CameraController(
-        selected,
-        camera.ResolutionPreset.high,
-        enableAudio: true,
-      );
-
-      await controller.initialize();
+      await _transport?.stop();
+      final role = ref.read(cameraProvider).role == CameraRole.pastor
+          ? 'pastor'
+          : 'crowd';
+      final transport = LanCameraTransport(role: role);
+      await transport.start(_directorIpController.text.trim());
       if (!mounted) {
-        await controller.dispose();
+        await transport.stop();
         return;
       }
-
-      setState(() => _cameraController = controller);
-    } on camera.CameraException catch (error) {
-      if (mounted) {
-        setState(() => _cameraError = 'Camera error: ${error.code}');
-      }
+      setState(() {
+        _transport = transport;
+        _cameraError = null;
+      });
+      ref.read(cameraProvider.notifier).setConnected(true);
     } catch (error) {
       if (mounted) {
-        setState(() => _cameraError = 'Unable to open camera: $error');
+        setState(() => _cameraError = 'Connection failed: $error');
       }
     }
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    final controller = _cameraController;
-    if (controller == null || !controller.value.isInitialized) return;
-
-    if (state == AppLifecycleState.inactive) {
-      controller.dispose();
-    } else if (state == AppLifecycleState.resumed) {
-      _cameraController = null;
-      _initializeCamera();
-    }
+  Future<void> _disconnectFromDirector() async {
+    await _transport?.stop();
+    if (mounted) setState(() => _transport = null);
+    ref.read(cameraProvider.notifier).setConnected(false);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _cameraController?.dispose();
+    _transport?.stop();
+    _directorIpController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive) {
+      _transport?.stop();
+      if (mounted) {
+        setState(() => _transport = null);
+        ref.read(cameraProvider.notifier).setConnected(false);
+      }
+    }
   }
 
   @override
@@ -220,11 +213,14 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
                 ),
                 child: Stack(
                   children: [
-                    if (_cameraController?.value.isInitialized == true)
+                    if (_transport?.localRenderer.srcObject != null)
                       Positioned.fill(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16),
-                          child: camera.CameraPreview(_cameraController!),
+                          child: RTCVideoView(
+                            _transport!.localRenderer,
+                            objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                          ),
                         ),
                       )
                     else
@@ -254,9 +250,9 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
                       bottom: 18,
                       left: 18,
                       child: Text(
-                        _cameraController?.value.isInitialized == true
-                            ? 'REAL CAMERA PREVIEW'
-                            : 'OPENING CAMERA',
+                        _transport?.localRenderer.srcObject != null
+                            ? 'REAL CAMERA • WEBRTC'
+                            : 'NOT CONNECTED',
                         style: TextStyle(
                           color: Colors.white.withOpacity(.75),
                         ),
@@ -275,15 +271,27 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
                     children: [
                       _Metric(icon: Icons.battery_5_bar, label: '${state.batteryPercent}% battery'),
                       _Metric(icon: Icons.wifi, label: '${state.signalPercent}% signal'),
-                      _Metric(icon: Icons.lan_outlined, label: 'Mock transport'),
+                      _Metric(icon: Icons.lan_outlined, label: 'WebRTC LAN'),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _directorIpController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Director phone IP address',
+                      hintText: 'Example: 192.168.1.100',
+                      prefixIcon: Icon(Icons.router_outlined),
+                    ),
                   ),
                   const SizedBox(height: 18),
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: FilledButton.icon(
-                      onPressed: controller.toggleConnection,
+                      onPressed: state.connected
+                          ? _disconnectFromDirector
+                          : _connectToDirector,
                       icon: Icon(state.connected ? Icons.stop : Icons.link),
                       label: Text(state.connected ? 'STOP SENDING FEED' : 'CONNECT TO DIRECTOR'),
                     ),
