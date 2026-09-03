@@ -5,11 +5,13 @@ import 'signaling_server.dart';
 class DirectorWebRTCTransport {
   RTCPeerConnection? _peerConnection;
   final RTCVideoRenderer remoteRenderer = RTCVideoRenderer();
+  SignalingServer? _signalingServer;
   bool _isConnected = false;
 
   DirectorWebRTCTransport();
 
-  Future<void> initialize() async {
+  Future<void> initialize(SignalingServer signalingServer) async {
+    _signalingServer = signalingServer;
     await remoteRenderer.initialize();
     
     _peerConnection = await createPeerConnection({
@@ -26,8 +28,15 @@ class DirectorWebRTCTransport {
     };
 
     _peerConnection!.onIceCandidate = (RTCIceCandidate candidate) {
-      if (candidate.candidate != null) {
-        // We need to pass the signaling server instance, handled in main.dart
+      if (candidate.candidate != null && _signalingServer != null) {
+        _signalingServer!.sendCandidate({
+          'type': 'candidate',
+          'candidate': {
+            'candidate': candidate.candidate,
+            'sdpMid': candidate.sdpMid,
+            'sdpMLineIndex': candidate.sdpMLineIndex,
+          },
+        });
       }
     };
   }
@@ -42,10 +51,12 @@ class DirectorWebRTCTransport {
     await _peerConnection!.setLocalDescription(answer);
 
     // Send the answer back to the camera
-    signalingServer.sendAnswer({
-      'type': 'answer',
-      'sdp': answer.sdp,
-    });
+    if (_signalingServer != null) {
+      _signalingServer!.sendAnswer({
+        'type': 'answer',
+        'sdp': answer.sdp,
+      });
+    }
   }
 
   void handleCandidate(Map<String, dynamic> data) async {
