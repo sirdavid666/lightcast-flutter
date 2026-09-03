@@ -38,9 +38,13 @@ jobs:
         working-directory: apps/lightcast_director
         run: flutter clean
 
+      - name: Re-fetch dependencies after clean
+        working-directory: apps/lightcast_director
+        run: flutter pub get
+
       - name: Build Director APK
         working-directory: apps/lightcast_director
-        run: flutter build apk --debug --no-pub
+        run: flutter build apk --debug
 
       - name: Upload Director APK
         uses: actions/upload-artifact@v4
@@ -76,9 +80,13 @@ jobs:
         working-directory: apps/lightcast_camera
         run: flutter clean
 
+      - name: Re-fetch dependencies after clean
+        working-directory: apps/lightcast_camera
+        run: flutter pub get
+
       - name: Build Camera APK
         working-directory: apps/lightcast_camera
-        run: flutter build apk --debug --no-pub
+        run: flutter build apk --debug
 
       - name: Upload Camera APK
         uses: actions/upload-artifact@v4
