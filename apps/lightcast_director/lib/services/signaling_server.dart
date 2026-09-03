@@ -8,26 +8,17 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 class SignalingServer {
   HttpServer? _server;
-  
-  // Store multiple connections based on role (pastor/crowd)
   final Map<String, WebSocketChannel> _channels = {};
   
   final Function(String role, Map<String, dynamic>) onOfferReceived;
   final Function(String role, Map<String, dynamic>) onCandidateReceived;
 
-  SignalingServer({
-    required this.onOfferReceived,
-    required this.onCandidateReceived,
-  });
+  SignalingServer({required this.onOfferReceived, required this.onCandidateReceived});
 
   Future<void> start() async {
-    final handler = Pipeline().addHandler(
+    final handler = const Pipeline().addHandler(
       webSocketHandler((webSocket, HttpRequest request) {
-        // Extract role from URL path (e.g., /pastor or /crowd)
-        final role = request.uri.pathSegments.isNotEmpty 
-            ? request.uri.pathSegments.first 
-            : 'unknown';
-            
+        final role = request.uri.pathSegments.isNotEmpty ? request.uri.pathSegments.first : 'unknown';
         _channels[role] = webSocket;
         debugPrint('[SignalingServer] 📱 $role camera connected!');
 
@@ -35,12 +26,8 @@ class SignalingServer {
           try {
             final data = jsonDecode(message);
             debugPrint('[SignalingServer] Received from $role: ${data['type']}');
-
-            if (data['type'] == 'offer') {
-              onOfferReceived(role, data);
-            } else if (data['type'] == 'candidate') {
-              onCandidateReceived(role, data);
-            }
+            if (data['type'] == 'offer') onOfferReceived(role, data);
+            else if (data['type'] == 'candidate') onCandidateReceived(role, data);
           } catch (e) {
             debugPrint('[SignalingServer] Error parsing message: $e');
           }
@@ -52,13 +39,12 @@ class SignalingServer {
     );
 
     _server = await io.serve(handler, '0.0.0.0', 8080);
-    debugPrint('[SignalingServer] 🟢 Listening for cameras on port ${_server!.port}');
+    debugPrint('[SignalingServer]  Listening for cameras on port ${_server!.port}');
   }
 
   void sendAnswer(String role, Map<String, dynamic> answer) {
     if (_channels[role] != null) {
       _channels[role]!.sink.add(jsonEncode(answer));
-      debugPrint('[SignalingServer] Sent answer to $role camera');
     }
   }
 
@@ -69,10 +55,7 @@ class SignalingServer {
   }
 
   Future<void> stop() async {
-    for (var channel in _channels.values) {
-      await channel.sink.close();
-    }
+    for (var channel in _channels.values) { await channel.sink.close(); }
     await _server?.close();
-    debugPrint('[SignalingServer] Stopped');
   }
 }
