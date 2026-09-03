@@ -6,6 +6,7 @@ pluginManagement {
         assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
         return flutterSdkPath
     }()
+
     includeBuild("${flutterSdkPath}/packages/flutter_tools/gradle")
 
     repositories {
@@ -23,10 +24,13 @@ plugins {
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    
     repositories {
         google()
         mavenCentral()
-        maven { url 'https://jitpack.io' } // Required for RootEncoder
+        
+        // JitPack for RootEncoder
+        maven { url 'https://jitpack.io' }
     }
 }
 
