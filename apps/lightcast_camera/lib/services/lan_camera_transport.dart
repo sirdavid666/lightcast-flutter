@@ -55,11 +55,14 @@ class LanCameraTransport {
     };
 
     // Create the video/audio offer
-    final offer = await _peerConnection!.createOffer({'offerToReceiveVideo': 1, 'offerToReceiveAudio': 1});
+    final offer = await _peerConnection!.createOffer({
+      'offerToReceiveVideo': 1,
+      'offerToReceiveAudio': 1,
+    });
     await _peerConnection!.setLocalDescription(offer);
 
-    // Connect to the Director's signaling server
-    _channel = WebSocketChannel.connect(Uri.parse('ws://$_directorIp:8080'));
+    // Connect to the Director's signaling server with the specific role path
+    _channel = WebSocketChannel.connect(Uri.parse('ws://$_directorIp:8080/$role'));
     
     // Listen for the Director's answer
     _channel!.stream.listen((message) async {
