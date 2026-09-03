@@ -115,7 +115,12 @@ class ProductionController extends StateNotifier<ProductionState> {
         payload: Map<String, dynamic>.from(tickerLayer.payload),
       ),
     );
-    state = state.copyWith(programScene: program);
+    final preview = _updateLayer(
+      state.previewScene,
+      'ticker',
+      (layer) => layer.copyWith(visible: true),
+    );
+    state = state.copyWith(programScene: program, previewScene: preview);
   }
 
   void take() => state = state.copyWith(
