@@ -371,23 +371,36 @@ class StreamingService : Service() {
     peer.setRemoteDescription(
       SimpleSdpObserver(
         onSetSuccessCallback = {
+          remoteDescriptions.add(role)
+          pendingCandidates.remove(role)?.forEach { candidate ->
+            peer.addIceCandidate(candidate)
+          }
           peer.createAnswer(
             SimpleSdpObserver(
               onCreateSuccess = { answer ->
                 peer.setLocalDescription(
                   SimpleSdpObserver(
                     onSetSuccessCallback = { waitForIceAndAnswer(role) },
-                    onFailure = { error -> Log.e(TAG, "Local SDP failed for $role: $error") }
+                    onFailure = { error ->
+                      Log.e(TAG, "Local SDP failed for $role: $error")
+                      fail(role, "Local SDP failed: $error")
+                    }
                   ),
                   answer
                 )
               },
-              onFailure = { error -> Log.e(TAG, "Answer failed for $role: $error") }
+              onFailure = { error ->
+                Log.e(TAG, "Answer failed for $role: $error")
+                fail(role, "Answer failed: $error")
+              }
             ),
             MediaConstraints()
           )
         },
-        onFailure = { error -> Log.e(TAG, "Remote SDP failed for $role: $error") }
+        onFailure = { error ->
+          Log.e(TAG, "Remote SDP failed for $role: $error")
+          fail(role, "Remote SDP failed: $error")
+        }
       ),
       SessionDescription(SessionDescription.Type.OFFER, sdp)
     )
