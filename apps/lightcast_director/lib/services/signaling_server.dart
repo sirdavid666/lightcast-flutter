@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -9,59 +10,82 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'streaming_service.dart';
 
+typedef CameraStatusCallback = void Function(String role, bool connected);
+
 class SignalingServer {
   HttpServer? _server;
   final Map<String, WebSocketChannel> _channels = {};
+  final CameraStatusCallback? onCameraStatusChanged;
 
-  SignalingServer();
+  SignalingServer({this.onCameraStatusChanged});
 
   Future<void> start() async {
+    if (_server != null) return;
     final handler = const Pipeline().addHandler(
       webSocketHandler((webSocket, HttpRequest request) {
         final role = request.uri.pathSegments.isNotEmpty
             ? request.uri.pathSegments.first
             : 'unknown';
+        _channels[role]?.sink.close();
         _channels[role] = webSocket;
-        debugPrint('[SignalingServer] 📱 $role camera connected!');
+        onCameraStatusChanged?.call(role, true);
+        debugPrint('[SignalingServer] camera connected: $role');
 
-        webSocket.stream.listen((message) async {
-          try {
-            final data = jsonDecode(message);
-            if (data['type'] == 'offer') {
-              debugPrint(
-                '[SignalingServer] Received offer from $role, processing natively...',
-              );
-              final answerSdp = await StreamingService.handleOffer(
-                data['sdp'] as String? ?? '',
-                role: role,
-              );
-              if (answerSdp != null) {
-                _channels[role]?.sink.add(
-                  jsonEncode({'type': 'answer', 'sdp': answerSdp}),
-                );
-              }
-            } else if (data['type'] == 'candidate') {
-              await StreamingService.addIceCandidate(
-                role: role,
-                sdp: data['candidate'] as String? ?? '',
-                mid: data['sdpMid'] as String?,
-                lineIndex: (data['sdpMLineIndex'] as num?)?.toInt() ?? 0,
-              );
-            }
-          } catch (error) {
-            debugPrint('[SignalingServer] Error parsing message: $error');
-          }
+        webSocket.stream.listen((message) {
+          unawaited(_handleMessage(role, webSocket, message));
+        }, onError: (Object error) {
+          debugPrint('[SignalingServer] WebSocket error for $role: $error');
         }, onDone: () {
-          debugPrint('[SignalingServer] $role camera disconnected');
-          _channels.remove(role);
+          if (identical(_channels[role], webSocket)) {
+            _channels.remove(role);
+            onCameraStatusChanged?.call(role, false);
+          }
+          debugPrint('[SignalingServer] camera disconnected: $role');
         });
       }),
     );
-
     _server = await io.serve(handler, '0.0.0.0', 8080);
-    debugPrint(
-      '[SignalingServer] Listening for cameras on port ${_server!.port}',
-    );
+    debugPrint('[SignalingServer] Listening for cameras on port ' + _server!.port.toString());
+  }
+
+  Future<void> _handleMessage(
+    String role,
+    WebSocketChannel webSocket,
+    dynamic message,
+  ) async {
+    try {
+      final data = jsonDecode(message as String) as Map<String, dynamic>;
+      if (data['type'] == 'offer') {
+        debugPrint('[SignalingServer] offer received from $role');
+        final answerSdp = await StreamingService.handleOffer(
+          data['sdp'] as String? ?? '',
+          role: role,
+        );
+        if (answerSdp == null || answerSdp.isEmpty) {
+          webSocket.sink.add(jsonEncode({
+            'type': 'error',
+            'message': 'Director failed to create a WebRTC answer',
+          }));
+        } else if (identical(_channels[role], webSocket)) {
+          webSocket.sink.add(jsonEncode({'type': 'answer', 'sdp': answerSdp}));
+        }
+      } else if (data['type'] == 'candidate') {
+        final raw = data['candidate'];
+        final candidate = raw is Map ? Map<String, dynamic>.from(raw) : data;
+        await StreamingService.addIceCandidate(
+          role: role,
+          sdp: candidate['candidate'] as String? ?? '',
+          mid: candidate['sdpMid'] as String?,
+          lineIndex: (candidate['sdpMLineIndex'] as num?)?.toInt() ?? 0,
+        );
+      }
+    } catch (error, stack) {
+      debugPrint('[SignalingServer] message error for $role: $error\\n$stack');
+      webSocket.sink.add(jsonEncode({
+        'type': 'error',
+        'message': 'Director could not process signaling data',
+      }));
+    }
   }
 
   Future<void> stop() async {
@@ -70,5 +94,6 @@ class SignalingServer {
     }
     _channels.clear();
     await _server?.close();
+    _server = null;
   }
 }
