@@ -50,8 +50,13 @@ class NativeStreamingService {
     required String streamKey,
     String overlayText = '',
     String lyrics = '',
+    String scripture = '',
+    String scriptureReference = '',
     String ticker = '',
     Uint8List? logoBytes,
+    bool showLyrics = false,
+    bool showScripture = false,
+    bool showTicker = true,
     String layout = 'pastorOnly',
   }) async {
     try {
@@ -59,8 +64,13 @@ class NativeStreamingService {
         'url': url,
         'streamKey': streamKey,
         'lyrics': lyrics.isNotEmpty ? lyrics : overlayText,
+        'scripture': scripture,
+        'scriptureReference': scriptureReference,
         'ticker': ticker,
         'logoBytes': logoBytes,
+        'showLyrics': showLyrics,
+        'showScripture': showScripture,
+        'showTicker': showTicker,
         'layout': layout,
       });
       return true;
@@ -72,15 +82,25 @@ class NativeStreamingService {
 
   static Future<bool> updateScene({
     String lyrics = '',
+    String scripture = '',
+    String scriptureReference = '',
     String ticker = '',
     Uint8List? logoBytes,
+    bool showLyrics = false,
+    bool showScripture = false,
+    bool showTicker = true,
     String? layout,
   }) async {
     try {
       await _channel.invokeMethod('updateScene', {
         'lyrics': lyrics,
+        'scripture': scripture,
+        'scriptureReference': scriptureReference,
         'ticker': ticker,
         'logoBytes': logoBytes,
+        'showLyrics': showLyrics,
+        'showScripture': showScripture,
+        'showTicker': showTicker,
         'layout': layout,
       });
       return true;
@@ -122,8 +142,13 @@ class StreamingService {
     required String streamKey,
     required String overlayText,
     String lyrics = '',
+    String scripture = '',
+    String scriptureReference = '',
     String ticker = '',
     Uint8List? logoBytes,
+    bool showLyrics = false,
+    bool showScripture = false,
+    bool showTicker = true,
     String layout = 'pastorOnly',
   }) =>
       NativeStreamingService.startStream(
@@ -131,21 +156,36 @@ class StreamingService {
         streamKey: streamKey,
         overlayText: overlayText,
         lyrics: lyrics,
+        scripture: scripture,
+        scriptureReference: scriptureReference,
         ticker: ticker,
         logoBytes: logoBytes,
+        showLyrics: showLyrics,
+        showScripture: showScripture,
+        showTicker: showTicker,
         layout: layout,
       );
 
   static Future<bool> updateScene({
     String lyrics = '',
+    String scripture = '',
+    String scriptureReference = '',
     String ticker = '',
     Uint8List? logoBytes,
+    bool showLyrics = false,
+    bool showScripture = false,
+    bool showTicker = true,
     String? layout,
   }) =>
       NativeStreamingService.updateScene(
         lyrics: lyrics,
+        scripture: scripture,
+        scriptureReference: scriptureReference,
         ticker: ticker,
         logoBytes: logoBytes,
+        showLyrics: showLyrics,
+        showScripture: showScripture,
+        showTicker: showTicker,
         layout: layout,
       );
 
