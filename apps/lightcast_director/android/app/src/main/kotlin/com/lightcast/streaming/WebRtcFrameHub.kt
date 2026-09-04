@@ -74,7 +74,7 @@ class WebRtcFrameHub {
   }
 
   private fun publish(role: String, frame: VideoFrame) {
-    val i420 = frame.buffer.toI420()
+    val i420 = frame.buffer.toI420() ?: return
     try {
       val width = i420.width
       val height = i420.height
