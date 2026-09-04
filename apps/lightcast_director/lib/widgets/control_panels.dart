@@ -353,7 +353,7 @@ class LogoPanel extends ConsumerWidget {
           leading: const CircleAvatar(child: Icon(Icons.image_outlined)),
           title: Text(state.logo.name),
           subtitle: Text('Opacity ${state.logo.opacity}%'),
-          trailing: IconButton(onPressed: () {}, icon: const Icon(Icons.upload_file)),
+          trailing: const Icon(Icons.image_outlined, color: Colors.white38),
         ),
         _ToggleAction(
           label: 'Show logo in Preview',
