@@ -502,13 +502,21 @@ class StreamingPanel extends ConsumerWidget {
                     logoData.offsetInBytes,
                     logoData.lengthInBytes,
                   );
+                  bool isVisible(LayerKind kind) => state.programScene.layers
+                      .firstWhere((layer) => layer.kind == kind)
+                      .visible;
                   final success = await StreamingService.startStream(
                     url: state.streamUrl.trim(),
                     streamKey: state.streamKey,
                     overlayText: state.lyrics.text,
                     lyrics: state.lyrics.text,
+                    scripture: state.scripture.text,
+                    scriptureReference: state.scripture.reference,
                     ticker: state.ticker.text,
                     logoBytes: logoBytes,
+                    showLyrics: isVisible(LayerKind.lyrics),
+                    showScripture: isVisible(LayerKind.scripture),
+                    showTicker: isVisible(LayerKind.ticker),
                     layout: state.layout.name,
                   );
                   if (success) controller.toggleLive();
