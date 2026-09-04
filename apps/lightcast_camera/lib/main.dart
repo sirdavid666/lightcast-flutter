@@ -1,29 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:lightcast_shared/lightcast_shared.dart';
 
 void main() {
-  runApp(const CameraApp(role: CameraRole.pastor));
+  runApp(const CameraApp());
 }
 
 class CameraApp extends StatelessWidget {
-  const CameraApp({required this.role, super.key});
-  final CameraRole role;
+  const CameraApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'LightCast ${role.name}',
+      title: 'LightCast Camera',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      home: CameraScreen(role: role),
+      home: const CameraScreen(),
     );
   }
 }
 
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({required this.role, super.key});
-  final CameraRole role;
+  const CameraScreen({super.key});
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -43,10 +40,10 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _initCamera() async {
-    // Use BACK camera for both pastor and crowd
+    // Use BACK camera
     final Map<String, dynamic> mediaConstraints = {
       'video': {
-        'facingMode': 'environment', // Always use back camera
+        'facingMode': 'environment',
         'width': {'ideal': 1280},
         'height': {'ideal': 720},
         'frameRate': {'ideal': 30}
@@ -87,10 +84,10 @@ class _CameraScreenState extends State<CameraScreen> {
       final offer = await _peerConnection!.createOffer();
       await _peerConnection!.setLocalDescription(offer);
 
-      // Send offer to director (you'll need to implement signaling)
+      // TODO: Implement signaling to send offer to director
       setState(() {
         _isConnected = true;
-        _status = 'Connected';
+        _status = 'Connected - Ready to stream';
       });
     } catch (e) {
       setState(() => _status = 'Connection failed: $e');
@@ -101,29 +98,44 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.role.name.toUpperCase()} CAM'),
+        title: const Text('LIGHTCAST CAMERA'),
         backgroundColor: Colors.red[700],
       ),
       body: Column(
         children: [
           Expanded(
-            child: _localRenderer != null
-                ? RTCVideoView(_localRenderer!, mirror: false)
-                : const Center(child: Text('Initializing camera...')),
+            child: Container(
+              color: Colors.black,
+              child: _localRenderer != null
+                  ? RTCVideoView(_localRenderer!, mirror: false)
+                  : const Center(child: CircularProgressIndicator()),
+            ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16),
+          Container(
+            padding: const EdgeInsets.all(20),
+            color: Colors.black87,
             child: Column(
               children: [
-                Text(_status, style: const TextStyle(fontSize: 16)),
+                Text(
+                  _status,
+                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: _isConnected ? null : _connectToDirector,
-                  icon: const Icon(Icons.videocam),
-                  label: Text(_isConnected ? 'Connected' : 'Connect to Director'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isConnected ? Colors.grey : Colors.red[700],
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: _isConnected ? null : _connectToDirector,
+                    icon: const Icon(Icons.videocam, size: 24),
+                    label: Text(
+                      _isConnected ? 'CONNECTED' : 'CONNECT TO DIRECTOR',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isConnected ? Colors.grey : Colors.red[700],
+                      disabledBackgroundColor: Colors.grey,
+                    ),
                   ),
                 ),
               ],
