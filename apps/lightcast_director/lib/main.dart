@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app/director_app.dart';
-import 'services/signaling_server.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  
+  // Force landscape orientation only
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-
-  // Start the local signaling server to listen for Camera phones
-  final signalingServer = SignalingServer();
-  await signalingServer.start();
+  
+  // Hide system UI for immersive experience
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
   runApp(const DirectorApp());
 }
