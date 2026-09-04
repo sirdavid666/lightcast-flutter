@@ -60,7 +60,7 @@ class SignalingServer {
         final answerSdp = await StreamingService.handleOffer(
           data['sdp'] as String? ?? '',
           role: role,
-        );
+        ).timeout(const Duration(seconds: 15));
         if (answerSdp == null || answerSdp.isEmpty) {
           webSocket.sink.add(jsonEncode({
             'type': 'error',
