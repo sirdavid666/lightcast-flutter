@@ -512,10 +512,13 @@ class StreamingPanel extends ConsumerWidget {
                     lyrics: state.lyrics.text,
                     scripture: state.scripture.text,
                     scriptureReference: state.scripture.reference,
+                    lowerThirdName: state.lowerThird.name,
+                    lowerThirdTitle: state.lowerThird.title,
                     ticker: state.ticker.text,
                     logoBytes: logoBytes,
                     showLyrics: isVisible(LayerKind.lyrics),
                     showScripture: isVisible(LayerKind.scripture),
+                    showLowerThird: isVisible(LayerKind.lowerThird),
                     showTicker: isVisible(LayerKind.ticker),
                     layout: state.layout.name,
                   );
