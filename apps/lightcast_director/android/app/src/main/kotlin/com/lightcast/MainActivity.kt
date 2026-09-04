@@ -7,6 +7,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import com.lightcast.CameraPlatformViewFactory
 
 class MainActivity: FlutterActivity() {
     companion object {
@@ -26,6 +27,11 @@ class MainActivity: FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
+        flutterEngine.platformViewsController.registry.registerViewFactory(
+            "lightcast_camera_view",
+            CameraPlatformViewFactory()
+        )
+
         methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
         methodChannel.setMethodCallHandler { call, result ->
             handleMethod(call, result)
