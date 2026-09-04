@@ -255,6 +255,7 @@ class ScripturePanel extends ConsumerWidget {
             hintText: 'Search reference',
             prefixIcon: Icon(Icons.search),
           ),
+          onChanged: controller.setScriptureReference,
         ),
         const SizedBox(height: 10),
         TextFormField(
