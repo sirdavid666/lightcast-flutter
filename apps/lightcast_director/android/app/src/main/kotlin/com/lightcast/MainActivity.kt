@@ -71,10 +71,22 @@ class MainActivity: FlutterActivity() {
                 val url = call.argument<String>("url") ?: ""
                 val streamKey = call.argument<String>("streamKey") ?: ""
                 val lyrics = call.argument<String>("lyrics") ?: call.argument<String>("overlayText") ?: ""
+                val scripture = call.argument<String>("scripture") ?: ""
+                val scriptureReference = call.argument<String>("scriptureReference") ?: ""
                 val ticker = call.argument<String>("ticker") ?: ""
                 val logoBytes = call.argument<ByteArray>("logoBytes")
                 StreamingService.startStreaming(
-                    this, url, streamKey, lyrics, ticker, logoBytes,
+                    this,
+                    url,
+                    streamKey,
+                    lyrics,
+                    scripture,
+                    scriptureReference,
+                    ticker,
+                    logoBytes,
+                    call.argument<Boolean>("showLyrics") ?: false,
+                    call.argument<Boolean>("showScripture") ?: false,
+                    call.argument<Boolean>("showTicker") ?: true,
                     call.argument<String>("layout") ?: "pastorOnly"
                 )
                 result.success(true)
@@ -83,8 +95,13 @@ class MainActivity: FlutterActivity() {
                 StreamingService.updateScene(
                     this,
                     call.argument<String>("lyrics") ?: "",
+                    call.argument<String>("scripture") ?: "",
+                    call.argument<String>("scriptureReference") ?: "",
                     call.argument<String>("ticker") ?: "",
                     call.argument<ByteArray>("logoBytes"),
+                    call.argument<Boolean>("showLyrics") ?: false,
+                    call.argument<Boolean>("showScripture") ?: false,
+                    call.argument<Boolean>("showTicker") ?: true,
                     call.argument<String>("layout")
                 )
                 result.success(true)
