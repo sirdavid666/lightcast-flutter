@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -90,9 +91,9 @@ class _DirectorScreenContent extends StatelessWidget {
         ),
         body: Column(
           children: [
-            // FIX 1a: video area reduced flex 8 -> 6 (tabs move up)
+            const _TopIpBar(),
             Expanded(
-              flex: 6,
+              flex: 1,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 5),
                 child: Row(
@@ -120,10 +121,9 @@ class _DirectorScreenContent extends StatelessWidget {
                 ),
               ),
             ),
-            const _StatsBar(),
-            // FIX 1b: controls enlarged flex 2 -> 4 (panels get room + they already scroll via PanelShell/ListView)
+            _StatsBar(),
             Flexible(
-              flex: 4,
+              flex: 1,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(10, 2, 10, 8),
                 child: _Controls(
@@ -137,6 +137,81 @@ class _DirectorScreenContent extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TopIpBar extends StatefulWidget {
+  const _TopIpBar();
+  @override
+  State<_TopIpBar> createState() => _TopIpBarState();
+}
+
+class _TopIpBarState extends State<_TopIpBar> {
+  String _ip = 'finding...';
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+        includeLoopback: false,
+        includeLinkLocal: false,
+      );
+      final addresses = interfaces
+          .expand((i) => i.addresses)
+          .where((a) => !a.isLoopback)
+          .map((a) => a.address)
+          .toList();
+      final ip = addresses.firstWhere(
+        _isPrivate,
+        orElse: () => addresses.isEmpty ? 'Not on Wi-Fi' : addresses.first,
+      );
+      if (mounted) setState(() => _ip = ip);
+    } catch (_) {
+      if (mounted) setState(() => _ip = 'Unavailable');
+    }
+  }
+
+  bool _isPrivate(String v) {
+    final p = v.split('.').map(int.tryParse).toList();
+    if (p.length != 4 || p.any((e) => e == null)) return false;
+    return p[0] == 10 || (p[0] == 192 && p[1] == 168) || (p[0] == 172 && p[1]! >= 16 && p[1]! <= 31);
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.fromLTRB(10, 6, 10, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0D3B66),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFF2D7FC1)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.router, color: Colors.white, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Director IP: $_ip  —  enter this on each camera',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+              ),
+            ),
+            IconButton(
+              onPressed: _load,
+              icon: const Icon(Icons.refresh, color: Colors.white70, size: 16),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+            ),
+          ],
+        ),
+      );
 }
 
 class _TakeColumn extends StatelessWidget {
@@ -360,18 +435,17 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
                 ),
               ),
             ),
-          // FIX 2: ticker fully clipped — yellow/black overflow stripe removed
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: SizedBox(
               height: 28,
-              child: ClipRect(
-                child: ColoredBox(
-                  color: Colors.blue,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) => AnimatedBuilder(
+              child: ColoredBox(
+                color: Colors.blue,
+                child: LayoutBuilder(
+                  builder: (context, constraints) => ClipRect(
+                    child: AnimatedBuilder(
                       animation: _tickerAnimation,
                       builder: (context, child) => Transform.translate(
                         offset: Offset(_tickerAnimation.value * constraints.maxWidth, 0),
@@ -454,9 +528,10 @@ class _Controls extends StatelessWidget {
             labelPadding: const EdgeInsets.symmetric(horizontal: 11),
             labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
             onTap: onTab,
-            tabs: DirectorScreen.panelNames.map((name) => Tab(text: name)).toList(),
+            tabs: DirectorScreen.panelNames
+                .map((name) => Tab(text: name))
+                .toList(),
           ),
-          // Panels already scroll themselves (PanelShell = ListView). Do NOT wrap them.
           const Expanded(
             child: TabBarView(
               children: [
@@ -493,7 +568,7 @@ class _StatusPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(5),
       ),
       child: Text(
-        live ? '● $label' : label,
+        live ? '● ' + label : label,
         style: TextStyle(
           color: live ? const Color(0xFF4ADE80) : Colors.grey.shade400,
           fontWeight: FontWeight.w800,
