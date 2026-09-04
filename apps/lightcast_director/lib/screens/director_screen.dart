@@ -116,6 +116,8 @@ class _DirectorScreenContent extends StatelessWidget {
                                   title: 'PROGRAM',
                                   scene: state.programScene,
                                   lyricsText: state.lyrics.text,
+                                  scriptureText: state.scripture.text,
+                                  scriptureReference: state.scripture.reference,
                                   tickerText: state.ticker.text,
                                   tickerSpeed: state.ticker.speed,
                                   isProgram: true,
@@ -312,6 +314,8 @@ class _LargeBroadcastScreen extends StatefulWidget {
     required this.title,
     required this.scene,
     required this.lyricsText,
+    required this.scriptureText,
+    required this.scriptureReference,
     required this.tickerText,
     required this.tickerSpeed,
     required this.isProgram,
@@ -320,6 +324,8 @@ class _LargeBroadcastScreen extends StatefulWidget {
   final String title;
   final Scene? scene;
   final String lyricsText;
+  final String scriptureText;
+  final String scriptureReference;
   final String tickerText;
   final int tickerSpeed;
   final bool isProgram;
@@ -384,7 +390,15 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
     final pastorLayer = _layer(LayerKind.pastorVideo);
     final crowdLayer = _layer(LayerKind.crowdVideo);
     final hasLiveLayer = (pastorLayer?.visible ?? false) || (crowdLayer?.visible ?? false);
-    final lyrics = widget.lyricsText.trim();
+    final lyricsLayer = _layer(LayerKind.lyrics);
+    final scriptureLayer = _layer(LayerKind.scripture);
+    final tickerLayer = _layer(LayerKind.ticker);
+    final showLyrics = lyricsLayer?.visible ?? false;
+    final showScripture = scriptureLayer?.visible ?? false;
+    final showTicker = tickerLayer?.visible ?? false;
+    final lyrics = showLyrics ? widget.lyricsText.trim() : '';
+    final scripture = showScripture ? widget.scriptureText.trim() : '';
+    final scriptureReference = showScripture ? widget.scriptureReference.trim() : '';
     final tickerText = widget.tickerText.trim().isEmpty
         ? 'WELCOME TO SUNDAY SERVICE'
         : widget.tickerText;
@@ -402,7 +416,13 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
           // (reference: a 320-wide 16:9 frame) so nothing ever collides,
           // no matter how small or large the monitor renders.
           final scale = (box.maxWidth / 320).clamp(0.45, 1.6);
-          final tickerHeight = 28 * scale;
+          final tickerHeight = showTicker ? 28 * scale : 0.0;
+          final scriptureFrame = scriptureLayer == null
+              ? null
+              : _normalizedFrame(scriptureLayer.frame, box);
+          final lyricsFrame = lyricsLayer == null
+              ? null
+              : _normalizedFrame(lyricsLayer.frame, box);
           final badgeFontSize = (10 * scale).clamp(7.0, 12.0);
           final lyricsFontSize = (17 * scale).clamp(10.0, 19.0);
           final tickerFontSize = (12 * scale).clamp(8.0, 13.0);
@@ -466,37 +486,88 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
                   ),
                 ),
               ),
-              if (hasScene && lyrics.isNotEmpty)
+              if (hasScene && showScripture && scripture.isNotEmpty && scriptureFrame != null)
                 Positioned(
-                  left: 12 * scale,
-                  right: 12 * scale,
-                  bottom: tickerHeight + 6 * scale,
+                  left: scriptureFrame.x,
+                  top: scriptureFrame.y,
+                  width: scriptureFrame.width,
+                  height: scriptureFrame.height,
                   child: Container(
-                    constraints: BoxConstraints(maxHeight: 66 * scale),
+                    margin: EdgeInsets.all(6 * scale),
+                    padding: EdgeInsets.symmetric(horizontal: 10 * scale, vertical: 6 * scale),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(.72),
+                      borderRadius: BorderRadius.circular(7),
+                      border: Border.all(color: Colors.white.withOpacity(.2)),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          scripture,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: (16 * scale).clamp(10.0, 18.0),
+                            fontWeight: FontWeight.bold,
+                            shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+                          ),
+                        ),
+                        if (scriptureReference.isNotEmpty) ...[
+                          SizedBox(height: 3 * scale),
+                          Text(
+                            scriptureReference,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: (11 * scale).clamp(8.0, 13.0),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              if (hasScene && lyrics.isNotEmpty && lyricsFrame != null)
+                Positioned(
+                  left: lyricsFrame.x,
+                  top: lyricsFrame.y,
+                  width: lyricsFrame.width,
+                  height: lyricsFrame.height,
+                  child: Container(
+                    margin: EdgeInsets.all(6 * scale),
                     padding: EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 6 * scale),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(.7),
                       borderRadius: BorderRadius.circular(7),
                       border: Border.all(color: Colors.white.withOpacity(.2)),
                     ),
-                    child: Text(
-                      lyrics,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: lyricsFontSize,
-                        fontWeight: FontWeight.bold,
-                        shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+                    child: Center(
+                      child: Text(
+                        lyrics,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: lyricsFontSize,
+                          fontWeight: FontWeight.bold,
+                          shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
+              if (showTicker)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
                 child: SizedBox(
                   height: tickerHeight,
                   child: ColoredBox(
