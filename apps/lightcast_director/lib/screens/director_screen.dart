@@ -10,8 +10,14 @@ import '../services/signaling_server.dart';
 import '../widgets/control_panels.dart';
 
 final signalingServerProvider = Provider<SignalingServer>((ref) {
-  final server = SignalingServer();
-  unawaited(server.start());
+  final server = SignalingServer(
+    onCameraStatusChanged: (role, connected) {
+      ref.read(productionProvider.notifier).setCameraStatus(role, connected);
+    },
+  );
+  unawaited(server.start().catchError((error, stack) {
+    debugPrint('[SignalingServer] failed to start: $error');
+  }));
   ref.onDispose(() {
     unawaited(server.stop());
   });
