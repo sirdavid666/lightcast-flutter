@@ -1,55 +1,61 @@
 package com.lightcast.director
 
-import android.Manifest
-import android.content.pm.PackageManager
+import android.content.pm.ActivityInfo
+import android.os.Bundle
 import androidx.core.content.ContextCompat
 import com.lightcast.streaming.StreamingService
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
-class MainActivity : FlutterActivity() {
-    companion object { private const val CHANNEL = "com.lightcast/streaming" }
+class MainActivity: FlutterActivity() {
+    companion object {
+        private const val CHANNEL = "com.lightcast/streaming"
+    }
+
     private lateinit var streamingService: StreamingService
+    private lateinit var methodChannel: MethodChannel
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Force landscape orientation
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        
+        // Initialize streaming service
+        streamingService = StreamingService(this)
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        streamingService = StreamingService(applicationContext)
         
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
-            try {
-                when (call.method) {
-                    "handleOffer" -> {
-                        val sdp = call.argument<String>("sdp") ?: throw IllegalArgumentException("Missing sdp")
-                        streamingService.handleOffer(sdp) { answerSdp ->
-                            result.success(answerSdp)
-                        }
-                    }
-                    "startStream" -> {
-                        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                            result.error("PERMISSION_DENIED", "Microphone permission required", null)
-                            return@setMethodCallHandler
-                        }
-                        val url = call.argument<String>("url") ?: throw IllegalArgumentException("Missing url")
-                        val streamKey = call.argument<String>("streamKey") ?: throw IllegalArgumentException("Missing streamKey")
-                        val overlayText = call.argument<String>("overlayText") ?: ""
-                        streamingService.startStream(url, streamKey, overlayText)
-                        result.success(true)
-                    }
-                    "stopStream" -> { 
-                        streamingService.stopStream()
-                        result.success(true) 
-                    }
-                    else -> result.notImplemented()
-                }
-            } catch (error: Throwable) { 
-                result.error("STREAMING_ERROR", error.message, null) 
-            }
+        methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        methodChannel.setMethodCallHandler { call, result ->
+            handleMethod(call, result)
         }
     }
-    
-    override fun onDestroy() { 
-        if (::streamingService.isInitialized) streamingService.stopStream()
-        super.onDestroy() 
+
+    private fun handleMethod(call: MethodCall, result: MethodChannel.Result) {
+        when (call.method) {
+            "handleOffer" -> {
+                val sdp = call.argument<String>("sdp") ?: ""
+                streamingService.handleOffer(sdp) { answer ->
+                    result.success(answer)
+                }
+            }
+            "startStream" -> {
+                val url = call.argument<String>("url") ?: ""
+                val streamKey = call.argument<String>("streamKey") ?: ""
+                val overlayText = call.argument<String>("overlayText") ?: ""
+                streamingService.startStream(url, streamKey, overlayText)
+                result.success(true)
+            }
+            "stopStream" -> {
+                streamingService.stopStream()
+                result.success(true)
+            }
+            else -> result.notImplemented()
+        }
     }
 }
