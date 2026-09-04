@@ -219,7 +219,7 @@ class _LyricsPanelState extends ConsumerState<LyricsPanel> {
           items: const ['Verse', 'Chorus', 'Bridge']
               .map((value) => DropdownMenuItem(value: value, child: Text(value)))
               .toList(),
-          onChanged: (value) {},
+          onChanged: controller.setLyricsSection,
         ),
         const SizedBox(height: 10),
         TextFormField(
@@ -326,7 +326,14 @@ class _TickerPanelState extends ConsumerState<TickerPanel> {
           onChanged: (_) => controller.toggleLayer(LayerKind.ticker),
         ),
         Text('Speed  ${state.ticker.speed}', style: Theme.of(context).textTheme.bodySmall),
-        Slider(value: state.ticker.speed.toDouble(), min: 10, max: 100, onChanged: (_) {}),
+        Slider(
+          value: state.ticker.speed.toDouble(),
+          min: 10,
+          max: 100,
+          divisions: 18,
+          label: state.ticker.speed.toString(),
+          onChanged: controller.setTickerSpeed,
+        ),
       ],
     );
   }
