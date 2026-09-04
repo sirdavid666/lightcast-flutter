@@ -102,12 +102,17 @@ class _DirectorScreenContent extends StatelessWidget {
                       child: Column(
                         children: [
                           Expanded(
-                            child: _LargeBroadcastScreen(
-                              title: 'PREVIEW',
-                              scene: state.previewScene,
-                              lyricsText: state.lyrics.text,
-                              tickerText: state.ticker.text,
-                              isProgram: false,
+                            child: Center(
+                              child: AspectRatio(
+                                aspectRatio: 16 / 9,
+                                child: _LargeBroadcastScreen(
+                                  title: 'PREVIEW',
+                                  scene: state.previewScene,
+                                  lyricsText: state.lyrics.text,
+                                  tickerText: state.ticker.text,
+                                  isProgram: false,
+                                ),
+                              ),
                             ),
                           ),
                           Padding(
@@ -119,12 +124,17 @@ class _DirectorScreenContent extends StatelessWidget {
                             ),
                           ),
                           Expanded(
-                            child: _LargeBroadcastScreen(
-                              title: 'PROGRAM',
-                              scene: state.programScene,
-                              lyricsText: state.lyrics.text,
-                              tickerText: state.ticker.text,
-                              isProgram: true,
+                            child: Center(
+                              child: AspectRatio(
+                                aspectRatio: 16 / 9,
+                                child: _LargeBroadcastScreen(
+                                  title: 'PROGRAM',
+                                  scene: state.programScene,
+                                  lyricsText: state.lyrics.text,
+                                  tickerText: state.ticker.text,
+                                  isProgram: true,
+                                ),
+                              ),
                             ),
                           ),
                           _StatsBar(),
