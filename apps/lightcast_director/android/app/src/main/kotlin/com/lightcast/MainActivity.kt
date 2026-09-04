@@ -73,6 +73,8 @@ class MainActivity: FlutterActivity() {
                 val lyrics = call.argument<String>("lyrics") ?: call.argument<String>("overlayText") ?: ""
                 val scripture = call.argument<String>("scripture") ?: ""
                 val scriptureReference = call.argument<String>("scriptureReference") ?: ""
+                val lowerThirdName = call.argument<String>("lowerThirdName") ?: ""
+                val lowerThirdTitle = call.argument<String>("lowerThirdTitle") ?: ""
                 val ticker = call.argument<String>("ticker") ?: ""
                 val logoBytes = call.argument<ByteArray>("logoBytes")
                 StreamingService.startStreaming(
@@ -82,10 +84,13 @@ class MainActivity: FlutterActivity() {
                     lyrics,
                     scripture,
                     scriptureReference,
+                    lowerThirdName,
+                    lowerThirdTitle,
                     ticker,
                     logoBytes,
                     call.argument<Boolean>("showLyrics") ?: false,
                     call.argument<Boolean>("showScripture") ?: false,
+                    call.argument<Boolean>("showLowerThird") ?: false,
                     call.argument<Boolean>("showTicker") ?: true,
                     call.argument<String>("layout") ?: "pastorOnly"
                 )
@@ -97,10 +102,13 @@ class MainActivity: FlutterActivity() {
                     call.argument<String>("lyrics") ?: "",
                     call.argument<String>("scripture") ?: "",
                     call.argument<String>("scriptureReference") ?: "",
+                    call.argument<String>("lowerThirdName") ?: "",
+                    call.argument<String>("lowerThirdTitle") ?: "",
                     call.argument<String>("ticker") ?: "",
                     call.argument<ByteArray>("logoBytes"),
                     call.argument<Boolean>("showLyrics") ?: false,
                     call.argument<Boolean>("showScripture") ?: false,
+                    call.argument<Boolean>("showLowerThird") ?: false,
                     call.argument<Boolean>("showTicker") ?: true,
                     call.argument<String>("layout")
                 )
