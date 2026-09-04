@@ -51,8 +51,11 @@ class OpenGLCompositor(
 
   private var scriptureText = ""
   private var scriptureReference = ""
+  private var lowerThirdName = ""
+  private var lowerThirdTitle = ""
   private var showLyrics = true
   private var showScripture = false
+  private var showLowerThird = false
   private var showTicker = true
 
   private var program = 0
@@ -175,15 +178,21 @@ class OpenGLCompositor(
     layout: String? = null,
     scripture: String = "",
     scriptureReference: String = "",
+    lowerThirdName: String = "",
+    lowerThirdTitle: String = "",
     showLyrics: Boolean = true,
     showScripture: Boolean = false,
+    showLowerThird: Boolean = false,
     showTicker: Boolean = true
   ) {
     lyricsText = lyrics
     scriptureText = scripture
     this.scriptureReference = scriptureReference
+    this.lowerThirdName = lowerThirdName
+    this.lowerThirdTitle = lowerThirdTitle
     this.showLyrics = showLyrics
     this.showScripture = showScripture
+    this.showLowerThird = showLowerThird
     this.showTicker = showTicker
     tickerText = ticker
     logo = logoBitmap
@@ -388,6 +397,24 @@ class OpenGLCompositor(
         paint.color = Color.argb(225, 220, 230, 220)
         paint.textSize = 22f
         canvas.drawText(scriptureReference.take(60), OUTPUT_WIDTH / 2f, 155f, paint)
+      }
+    }
+
+    if (showLowerThird && (lowerThirdName.isNotBlank() || lowerThirdTitle.isNotBlank())) {
+      paint.color = Color.argb(220, 0, 0, 0)
+      canvas.drawRoundRect(RectF(42f, 430f, 600f, 515f), 10f, 10f, paint)
+      paint.color = Color.rgb(105, 220, 125)
+      canvas.drawRect(42f, 430f, 54f, 515f, paint)
+      paint.color = Color.WHITE
+      paint.textAlign = Paint.Align.LEFT
+      if (lowerThirdName.isNotBlank()) {
+        paint.textSize = 30f
+        canvas.drawText(lowerThirdName.take(42), 78f, 470f, paint)
+      }
+      if (lowerThirdTitle.isNotBlank()) {
+        paint.color = Color.argb(225, 220, 230, 220)
+        paint.textSize = 20f
+        canvas.drawText(lowerThirdTitle.take(58), 78f, 500f, paint)
       }
     }
 
