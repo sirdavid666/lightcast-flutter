@@ -30,7 +30,9 @@ import org.webrtc.RtpReceiver
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import org.webrtc.VideoTrack
+import org.webrtc.SurfaceViewRenderer
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArraySet
 
 /**
  * Foreground owner of the complete native program output.
@@ -65,6 +67,17 @@ class StreamingService : Service() {
     private var service: StreamingService? = null
     private val answerCallbacks = ConcurrentHashMap<String, (String) -> Unit>()
     private val errorCallbacks = ConcurrentHashMap<String, (String) -> Unit>()
+    private val registeredRenderers = ConcurrentHashMap<String, CopyOnWriteArraySet<SurfaceViewRenderer>>()
+
+    fun registerVideoRenderer(role: String, renderer: SurfaceViewRenderer) {
+      registeredRenderers.getOrPut(role) { CopyOnWriteArraySet() }.add(renderer)
+      service?.attachRenderer(role, renderer)
+    }
+
+    fun unregisterVideoRenderer(role: String, renderer: SurfaceViewRenderer) {
+      registeredRenderers[role]?.remove(renderer)
+      service?.detachRenderer(role, renderer)
+    }
     private val pendingCandidates = ConcurrentHashMap<String, MutableList<IceCandidate>>()
     private val remoteDescriptions = ConcurrentHashMap.newKeySet<String>()
 
@@ -173,6 +186,7 @@ class StreamingService : Service() {
   private val peers = ConcurrentHashMap<String, PeerConnection>()
   private val attachedVideoTracks = ConcurrentHashMap.newKeySet<String>()
   private val attachedAudioTracks = ConcurrentHashMap.newKeySet<String>()
+  private val videoTracks = ConcurrentHashMap<String, VideoTrack>()
   private var publisher: RtmpStream? = null
   private var compositor: OpenGLCompositor? = null
   private var startedForeground = false
@@ -238,6 +252,7 @@ class StreamingService : Service() {
     stopPublisher()
     peers.values.forEach { it.dispose() }
     peers.clear()
+    videoTracks.clear()
     pendingCandidates.clear()
     remoteDescriptions.clear()
     answerCallbacks.clear()
@@ -451,7 +466,19 @@ class StreamingService : Service() {
 
   private fun attachVideo(role: String, track: VideoTrack) {
     val key = "$role:${track.id()}"
-    if (attachedVideoTracks.add(key)) frameHub.attachVideo(role, track)
+    if (attachedVideoTracks.add(key)) {
+      videoTracks[role] = track
+      frameHub.attachVideo(role, track)
+      registeredRenderers[role]?.forEach { track.addSink(it) }
+    }
+  }
+
+  private fun attachRenderer(role: String, renderer: SurfaceViewRenderer) {
+    videoTracks[role]?.addSink(renderer)
+  }
+
+  private fun detachRenderer(role: String, renderer: SurfaceViewRenderer) {
+    videoTracks[role]?.removeSink(renderer)
   }
 
   private fun attachAudio(role: String, track: AudioTrack) {
