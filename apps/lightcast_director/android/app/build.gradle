@@ -62,4 +62,6 @@ flutter {
 
 dependencies {
     implementation "com.github.pedroSG94.RootEncoder:library:2.8.1"
+    // Keep the native WebRTC API in sync with flutter_webrtc 0.11.6.
+    implementation "io.github.webrtc-sdk:android:125.6422.03"
 }

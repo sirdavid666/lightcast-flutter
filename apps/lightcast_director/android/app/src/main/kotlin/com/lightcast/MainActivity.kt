@@ -13,7 +13,6 @@ class MainActivity: FlutterActivity() {
         private const val CHANNEL = "com.lightcast/streaming"
     }
 
-    private lateinit var streamingService: StreamingService
     private lateinit var methodChannel: MethodChannel
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,8 +21,6 @@ class MainActivity: FlutterActivity() {
         // Force landscape orientation
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         
-        // Initialize streaming service
-        streamingService = StreamingService(this)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -38,20 +35,42 @@ class MainActivity: FlutterActivity() {
     private fun handleMethod(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "handleOffer" -> {
+                val role = call.argument<String>("role") ?: "pastor"
                 val sdp = call.argument<String>("sdp") ?: ""
-                streamingService.handleOffer(sdp) { answer ->
-                    result.success(answer)
+                StreamingService.requestOffer(this, role, sdp) { answer ->
+                    runOnUiThread { result.success(answer) }
                 }
+            }
+            "addIceCandidate" -> {
+                StreamingService.addIceCandidate(
+                    this,
+                    call.argument<String>("role") ?: "pastor",
+                    call.argument<String>("sdp") ?: "",
+                    call.argument<String>("mid"),
+                    call.argument<Int>("lineIndex") ?: 0
+                )
+                result.success(true)
             }
             "startStream" -> {
                 val url = call.argument<String>("url") ?: ""
                 val streamKey = call.argument<String>("streamKey") ?: ""
-                val overlayText = call.argument<String>("overlayText") ?: ""
-                streamingService.startStream(url, streamKey, overlayText)
+                val lyrics = call.argument<String>("lyrics") ?: call.argument<String>("overlayText") ?: ""
+                val ticker = call.argument<String>("ticker") ?: ""
+                val logoBytes = call.argument<ByteArray>("logoBytes")
+                StreamingService.startStreaming(this, url, streamKey, lyrics, ticker, logoBytes)
+                result.success(true)
+            }
+            "updateScene" -> {
+                StreamingService.updateScene(
+                    this,
+                    call.argument<String>("lyrics") ?: "",
+                    call.argument<String>("ticker") ?: "",
+                    call.argument<ByteArray>("logoBytes")
+                )
                 result.success(true)
             }
             "stopStream" -> {
-                streamingService.stopStream()
+                StreamingService.stopStreaming(this)
                 result.success(true)
             }
             else -> result.notImplemented()
