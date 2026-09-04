@@ -49,6 +49,12 @@ class OpenGLCompositor(
   private val textureWidths = IntArray(6)
   private val textureHeights = IntArray(6)
 
+  private var scriptureText = ""
+  private var scriptureReference = ""
+  private var showLyrics = true
+  private var showScripture = false
+  private var showTicker = true
+
   private var program = 0
   private var positionHandle = 0
   private var textureCoordHandle = 0
@@ -166,9 +172,19 @@ class OpenGLCompositor(
     logoBitmap: Bitmap? = logo,
     pastorFrame: RectF = pastorRect,
     crowdFrame: RectF = crowdRect,
-    layout: String? = null
+    layout: String? = null,
+    scripture: String = "",
+    scriptureReference: String = "",
+    showLyrics: Boolean = true,
+    showScripture: Boolean = false,
+    showTicker: Boolean = true
   ) {
     lyricsText = lyrics
+    scriptureText = scripture
+    this.scriptureReference = scriptureReference
+    this.showLyrics = showLyrics
+    this.showScripture = showScripture
+    this.showTicker = showTicker
     tickerText = ticker
     logo = logoBitmap
     pastorRect = pastorFrame
@@ -211,7 +227,7 @@ class OpenGLCompositor(
   }
 
   override fun drawFilter() {
-    if (tickerText.isNotBlank()) overlayDirty = true
+    if (showTicker && tickerText.isNotBlank()) overlayDirty = true
     val pastor = frameHub.latestFrame("pastor")
     val crowd = frameHub.latestFrame("crowd")
     if (pastor !== uploadedPastor) {
@@ -361,16 +377,30 @@ class OpenGLCompositor(
       typeface = android.graphics.Typeface.create("sans", android.graphics.Typeface.BOLD)
     }
 
-    if (lyricsText.isNotBlank()) {
-      paint.color = Color.argb(210, 0, 0, 0)
-      canvas.drawRoundRect(RectF(110f, 525f, 1170f, 625f), 18f, 18f, paint)
+    if (showScripture && scriptureText.isNotBlank()) {
+      paint.color = Color.argb(215, 0, 0, 0)
+      canvas.drawRoundRect(RectF(90f, 40f, 1190f, 185f), 18f, 18f, paint)
+      paint.color = Color.WHITE
+      paint.textSize = 34f
+      paint.textAlign = Paint.Align.CENTER
+      canvas.drawText(scriptureText.take(90), OUTPUT_WIDTH / 2f, 112f, paint)
+      if (scriptureReference.isNotBlank()) {
+        paint.color = Color.argb(225, 220, 230, 220)
+        paint.textSize = 22f
+        canvas.drawText(scriptureReference.take(60), OUTPUT_WIDTH / 2f, 155f, paint)
+      }
+    }
+
+    if (showLyrics && lyricsText.isNotBlank()) {
+      paint.color = Color.argb(235, 35, 145, 58)
+      canvas.drawRect(0f, 525f, OUTPUT_WIDTH.toFloat(), 625f, paint)
       paint.color = Color.WHITE
       paint.textSize = 44f
       paint.textAlign = Paint.Align.CENTER
       canvas.drawText(lyricsText.take(72), OUTPUT_WIDTH / 2f, 588f, paint)
     }
 
-    if (tickerText.isNotBlank()) {
+    if (showTicker && tickerText.isNotBlank()) {
       paint.color = Color.argb(230, 13, 20, 34)
       canvas.drawRect(0f, 660f, OUTPUT_WIDTH.toFloat(), OUTPUT_HEIGHT.toFloat(), paint)
       paint.color = Color.WHITE
