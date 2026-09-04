@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lightcast_shared/lightcast_shared.dart';
 import '../app/theme.dart';
 import '../state/director_providers.dart';
 import '../widgets/control_panels.dart';
-import '../widgets/monitor_card.dart';
 
 class DirectorScreen extends ConsumerWidget {
   const DirectorScreen({super.key});
@@ -28,8 +28,6 @@ class DirectorScreen extends ConsumerWidget {
     
     return ProviderScope(
       overrides: [
-        // Since Kotlin handles WebRTC, we show a null renderer (black screen)
-        // The actual video is being processed natively for streaming
         webrtcTransportProvider.overrideWithValue(null),
       ],
       child: _DirectorScreenContent(state: state, controller: controller),
@@ -65,76 +63,283 @@ class _DirectorScreenContent extends StatelessWidget {
             const SizedBox(width: 18),
           ],
         ),
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 700;
-            final monitors = _Monitors(state: state, onTake: controller.take);
-            final controls = _Controls(onTab: (index) => controller.setPanel(DirectorScreen.panelNames[index]));
-            return Padding(
-              padding: const EdgeInsets.all(14),
-              child: wide
-                  ? Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(child: monitors), const SizedBox(width: 14), SizedBox(width: 360, child: controls)])
-                  : Column(children: [SizedBox(height: 430, child: monitors), const SizedBox(height: 12), SizedBox(height: 330, child: controls)]),
-            );
-          },
+        body: Column(
+          children: [
+            // LARGE PREVIEW & PROGRAM SCREENS
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+                child: Row(
+                  children: [
+                    // PREVIEW SCREEN (Left - Large)
+                    Expanded(
+                      child: _LargeBroadcastScreen(
+                        title: 'PREVIEW',
+                        scene: state.previewScene,
+                        isProgram: false,
+                        onTake: controller.take,
+                      ),
+                    ),
+                    
+                    // TAKE BUTTON (Center)
+                    Container(
+                      width: 80,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.arrow_forward, color: Colors.white30, size: 32),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            height: 100,
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: lightcastBlue,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: controller.take,
+                              child: const Text('TAKE', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 16)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    // PROGRAM SCREEN (Right - Large)
+                    Expanded(
+                      child: _LargeBroadcastScreen(
+                        title: 'PROGRAM',
+                        scene: state.programScene,
+                        isProgram: true,
+                        onTake: () {},
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // INFO BAR
+            Container(
+              margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(color: const Color(0xFF151922), borderRadius: BorderRadius.circular(10)),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: Colors.white38),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('Edits are staged in Preview. TAKE publishes the complete scene.', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey.shade400, fontSize: 12))),
+                ],
+              ),
+            ),
+            
+            // CONTROL PANELS (Tabs)
+            SizedBox(
+              height: 320,
+              child: _Controls(onTab: (index) => controller.setPanel(DirectorScreen.panelNames[index])),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _Monitors extends StatelessWidget {
-  const _Monitors({required this.state, required this.onTake});
-  final ProductionState state;
+// NEW: Large Broadcast Screen with Logo, Ticker, and Lyrics
+class _LargeBroadcastScreen extends StatefulWidget {
+  final String title;
+  final SceneState scene;
+  final bool isProgram;
   final VoidCallback onTake;
 
+  const _LargeBroadcastScreen({
+    required this.title,
+    required this.scene,
+    required this.isProgram,
+    required this.onTake,
+  });
+
   @override
-  Widget build(BuildContext context) => Column(
+  State<_LargeBroadcastScreen> createState() => _LargeBroadcastScreenState();
+}
+
+class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _tickerController;
+  late Animation<double> _tickerAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    // Scrolling ticker animation
+    _tickerController = AnimationController(
+      duration: const Duration(seconds: 20),
+      vsync: this,
+    );
+    _tickerAnimation = Tween<double>(begin: 1.0, end: -0.5).animate(_tickerController);
+    _tickerController.repeat();
+  }
+
+  @override
+  void dispose() {
+    _tickerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = widget.isProgram ? Colors.red : Colors.blue;
+    final lyrics = widget.scene.lyrics?.text ?? '';
+    final tickerText = widget.scene.ticker?.text ?? 'WELCOME TO SUNDAY SERVICE';
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: borderColor, width: 3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(child: MonitorCard(title: 'Preview', scene: state.previewScene, isProgram: false)),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 82,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.arrow_forward, color: Colors.white30),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          height: 76,
-                          child: FilledButton(
-                            style: FilledButton.styleFrom(backgroundColor: lightcastBlue, padding: const EdgeInsets.symmetric(horizontal: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                            onPressed: onTake,
-                            child: const Text('TAKE', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+          // Background (Black)
+          Container(color: Colors.black),
+
+          // Center Icon (Placeholder for video)
+          Center(
+            child: Icon(Icons.videocam, size: 100, color: Colors.white.withOpacity(0.1)),
+          ),
+
+          // Church Logo (Top Left)
+          Positioned(
+            top: 16,
+            left: 16,
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8)],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  'assets/images/church_logo.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(Icons.church, color: Colors.blue, size: 40);
+                  },
                 ),
-                const SizedBox(width: 10),
-                Expanded(child: MonitorCard(title: 'Program', scene: state.programScene, isProgram: true)),
-              ],
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(color: const Color(0xFF151922), borderRadius: BorderRadius.circular(10)),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, size: 16, color: Colors.white38),
-                const SizedBox(width: 8),
-                Expanded(child: Text('Edits are staged in Preview. TAKE publishes the complete scene.', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey.shade400, fontSize: 12))),
-              ],
+
+          // Lyrics Overlay (Center-Bottom, Large Text)
+          if (lyrics.isNotEmpty)
+            Positioned(
+              bottom: 80,
+              left: 24,
+              right: 24,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                ),
+                child: Text(
+                  lyrics,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    shadows: [Shadow(color: Colors.black, blurRadius: 6)],
+                  ),
+                ),
+              ),
+            ),
+
+          // Scrolling Ticker (Bottom)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 50,
+              color: Colors.blue[900],
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  AnimatedBuilder(
+                    animation: _tickerAnimation,
+                    builder: (context, child) {
+                      return Transform.translate(
+                        offset: Offset(_tickerAnimation.value * MediaQuery.of(context).size.width, 0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(width: 20),
+                            Text(
+                              tickerText,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 40),
+                            Text(
+                              '• NEWS • ',
+                              style: TextStyle(color: Colors.yellow[300], fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 20),
+                            Text(
+                              tickerText,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 40),
+                            Text(
+                              tickerText,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Title Badge (Top Right)
+          Positioned(
+            top: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: widget.isProgram ? Colors.red : Colors.blue,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                widget.title,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+              ),
             ),
           ),
         ],
-      );
+      ),
+    );
+  }
 }
 
 class _Controls extends StatelessWidget {
