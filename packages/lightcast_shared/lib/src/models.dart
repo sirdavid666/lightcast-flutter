@@ -268,6 +268,7 @@ class ProductionState {
     this.countdown = const CountdownDraft(),
     this.liveStatus = 'STANDBY',
     this.selectedPanel = 'Cameras',
+    this.streamUrl = 'rtmps://live-api-s.facebook.com:443/rtmp/',
     this.streamKey = '',
   });
 
@@ -283,6 +284,7 @@ class ProductionState {
   final CountdownDraft countdown;
   final String liveStatus;
   final String selectedPanel;
+  final String streamUrl;
   final String streamKey;
 
   ProductionState copyWith({
@@ -298,6 +300,7 @@ class ProductionState {
     CountdownDraft? countdown,
     String? liveStatus,
     String? selectedPanel,
+    String? streamUrl,
     String? streamKey,
   }) =>
       ProductionState(
@@ -313,6 +316,7 @@ class ProductionState {
         countdown: countdown ?? this.countdown,
         liveStatus: liveStatus ?? this.liveStatus,
         selectedPanel: selectedPanel ?? this.selectedPanel,
+        streamUrl: streamUrl ?? this.streamUrl,
         streamKey: streamKey ?? this.streamKey,
       );
 }

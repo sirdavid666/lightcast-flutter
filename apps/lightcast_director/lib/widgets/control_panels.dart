@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lightcast_shared/lightcast_shared.dart';
 import '../state/director_providers.dart';
@@ -23,6 +26,8 @@ class CamerasPanel extends ConsumerWidget {
     final controller = ref.read(productionProvider.notifier);
     return PanelShell(
       children: [
+        const _DirectorIpCard(),
+        const SizedBox(height: 10),
         const _PanelTitle('CAMERA LAYOUT'),
         Wrap(
           spacing: 8,
@@ -69,6 +74,110 @@ class CamerasPanel extends ConsumerWidget {
       ],
     );
   }
+}
+
+class _DirectorIpCard extends StatefulWidget {
+  const _DirectorIpCard();
+  @override
+  State<_DirectorIpCard> createState() => _DirectorIpCardState();
+}
+
+class _DirectorIpCardState extends State<_DirectorIpCard> {
+  TabController? _tabs;
+  String _ip = 'Finding LAN address...';
+  bool _busy = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final tabs = DefaultTabController.of(context);
+    if (_tabs == tabs) return;
+    _tabs?.removeListener(_onTabChanged);
+    _tabs = tabs..addListener(_onTabChanged);
+    if (tabs.index == 0) _loadIp();
+  }
+
+  void _onTabChanged() {
+    if (_tabs?.index == 0) _loadIp();
+  }
+
+  Future<void> _loadIp() async {
+    if (_busy) return;
+    _busy = true;
+    try {
+      final interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+        includeLoopback: false,
+        includeLinkLocal: false,
+      );
+      final addresses = interfaces
+          .expand((interface) => interface.addresses)
+          .where((address) => !address.isLoopback)
+          .map((address) => address.address)
+          .toList();
+      final ip = addresses.firstWhere(_isPrivateIpv4,
+          orElse: () => addresses.isEmpty ? 'No LAN IPv4 found' : addresses.first);
+      if (mounted) setState(() => _ip = ip);
+    } catch (_) {
+      if (mounted) setState(() => _ip = 'Unavailable');
+    } finally {
+      _busy = false;
+    }
+  }
+
+  bool _isPrivateIpv4(String value) {
+    final parts = value.split('.').map(int.tryParse).toList();
+    if (parts.length != 4 || parts.any((part) => part == null)) return false;
+    final first = parts[0]!;
+    final second = parts[1]!;
+    return first == 10 ||
+        (first == 192 && second == 168) ||
+        (first == 172 && second >= 16 && second <= 31);
+  }
+
+  @override
+  void dispose() {
+    _tabs?.removeListener(_onTabChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0D3B66),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFF2D7FC1)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.router, color: Colors.white, size: 20),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Director IP: ' + _ip,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 2),
+                  const Text('Enter this address on each camera phone to connect.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.white70, fontSize: 11)),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'Refresh IP address',
+              onPressed: _loadIp,
+              icon: const Icon(Icons.refresh, color: Colors.white70, size: 18),
+            ),
+          ],
+        ),
+      );
 }
 
 class LyricsPanel extends ConsumerStatefulWidget {
@@ -130,58 +239,26 @@ class _LyricsPanelState extends ConsumerState<LyricsPanel> {
   }
 }
 
-class ScripturePanel extends ConsumerStatefulWidget {
+class ScripturePanel extends ConsumerWidget {
   const ScripturePanel({super.key});
 
   @override
-  ConsumerState<ScripturePanel> createState() => _ScripturePanelState();
-}
-
-class _ScripturePanelState extends ConsumerState<ScripturePanel> {
-  late TextEditingController _referenceController;
-  late TextEditingController _textController;
-
-  @override
-  void initState() {
-    super.initState();
-    final state = ref.read(productionProvider);
-    _referenceController = TextEditingController(text: state.scripture.reference);
-    _textController = TextEditingController(text: state.scripture.text);
-  }
-
-  @override
-  void dispose() {
-    _referenceController.dispose();
-    _textController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
-    
-    if (_referenceController.text != state.scripture.reference) {
-      _referenceController.text = state.scripture.reference;
-    }
-    if (_textController.text != state.scripture.text) {
-      _textController.text = state.scripture.text;
-    }
-    
     return PanelShell(
       children: [
         const _PanelTitle('SCRIPTURE SEARCH'),
         TextFormField(
-          controller: _referenceController,
+          initialValue: state.scripture.reference,
           decoration: const InputDecoration(
             hintText: 'Search reference',
             prefixIcon: Icon(Icons.search),
           ),
-          onChanged: (_) {},
         ),
         const SizedBox(height: 10),
         TextFormField(
-          controller: _textController,
+          initialValue: state.scripture.text,
           maxLines: 3,
           decoration: const InputDecoration(labelText: 'Displayed text'),
           onChanged: controller.setScriptureText,
@@ -378,10 +455,19 @@ class StreamingPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
-    
+
     return PanelShell(
       children: [
         const _PanelTitle('FACEBOOK LIVE'),
+        TextFormField(
+          initialValue: state.streamUrl,
+          decoration: const InputDecoration(
+            labelText: 'Facebook RTMPS URL',
+            prefixIcon: Icon(Icons.link),
+          ),
+          onChanged: controller.setStreamUrl,
+        ),
+        const SizedBox(height: 10),
         TextFormField(
           obscureText: true,
           decoration: const InputDecoration(
@@ -396,25 +482,32 @@ class StreamingPanel extends ConsumerWidget {
             backgroundColor: state.liveStatus == 'LIVE' ? Colors.grey : const Color(0xFFB4232F),
             minimumSize: const Size(double.infinity, 50),
           ),
-          onPressed: state.liveStatus == 'LIVE' 
+          onPressed: state.liveStatus == 'LIVE'
               ? () async {
                   await StreamingService.stopStream();
                   controller.toggleLive();
                 }
               : () async {
-                  if (state.streamKey.isEmpty) {
+                  if (state.streamUrl.trim().isEmpty || state.streamKey.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter a Stream Key')),
+                      const SnackBar(content: Text('Enter an RTMPS URL and Stream Key')),
                     );
                     return;
                   }
-                  
-                  final success = await StreamingService.startStream(
-                    url: 'rtmps://live-api-s.facebook.com:443/rtmp/',
-                    streamKey: state.streamKey,
-                    overlayText: state.ticker.text,
+                  final logoData = await rootBundle.load('assets/images/church_logo.png');
+                  final logoBytes = logoData.buffer.asUint8List(
+                    logoData.offsetInBytes,
+                    logoData.lengthInBytes,
                   );
-
+                  final success = await StreamingService.startStream(
+                    url: state.streamUrl.trim(),
+                    streamKey: state.streamKey,
+                    overlayText: state.lyrics.text,
+                    lyrics: state.lyrics.text,
+                    ticker: state.ticker.text,
+                    logoBytes: logoBytes,
+                    layout: state.layout.name,
+                  );
                   if (success) controller.toggleLive();
                 },
           icon: Icon(state.liveStatus == 'LIVE' ? Icons.stop : Icons.wifi_tethering),

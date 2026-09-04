@@ -57,7 +57,10 @@ class MainActivity: FlutterActivity() {
                 val lyrics = call.argument<String>("lyrics") ?: call.argument<String>("overlayText") ?: ""
                 val ticker = call.argument<String>("ticker") ?: ""
                 val logoBytes = call.argument<ByteArray>("logoBytes")
-                StreamingService.startStreaming(this, url, streamKey, lyrics, ticker, logoBytes)
+                StreamingService.startStreaming(
+                    this, url, streamKey, lyrics, ticker, logoBytes,
+                    call.argument<String>("layout") ?: "pastorOnly"
+                )
                 result.success(true)
             }
             "updateScene" -> {
@@ -65,7 +68,8 @@ class MainActivity: FlutterActivity() {
                     this,
                     call.argument<String>("lyrics") ?: "",
                     call.argument<String>("ticker") ?: "",
-                    call.argument<ByteArray>("logoBytes")
+                    call.argument<ByteArray>("logoBytes"),
+                    call.argument<String>("layout")
                 )
                 result.success(true)
             }

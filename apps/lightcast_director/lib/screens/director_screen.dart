@@ -1,9 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lightcast_shared/lightcast_shared.dart';
 import '../app/theme.dart';
 import '../state/director_providers.dart';
+import '../services/signaling_server.dart';
 import '../widgets/control_panels.dart';
+
+final signalingServerProvider = Provider<SignalingServer>((ref) {
+  final server = SignalingServer();
+  unawaited(server.start());
+  ref.onDispose(() { unawaited(server.stop()); });
+  return server;
+});
 
 class DirectorScreen extends ConsumerWidget {
   const DirectorScreen({super.key});
@@ -24,6 +34,7 @@ class DirectorScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
+    ref.watch(signalingServerProvider);
 
     return ProviderScope(
       overrides: [

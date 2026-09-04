@@ -71,6 +71,8 @@ class OpenGLCompositor(
   // Rectangles use Flutter's normalized top-left coordinates.
   private var pastorRect = RectF(0f, 0f, 1f, 1f)
   private var crowdRect = RectF(0.72f, 0.68f, 0.97f, 0.97f)
+  private var pastorVisible = true
+  private var crowdVisible = false
 
   override fun initGlFilter(context: Context) {
     val vertexShader = """
@@ -163,17 +165,53 @@ class OpenGLCompositor(
     ticker: String,
     logoBitmap: Bitmap? = logo,
     pastorFrame: RectF = pastorRect,
-    crowdFrame: RectF = crowdRect
+    crowdFrame: RectF = crowdRect,
+    layout: String? = null
   ) {
     lyricsText = lyrics
     tickerText = ticker
     logo = logoBitmap
     pastorRect = pastorFrame
     crowdRect = crowdFrame
+    layout?.let(::updateLayout)
+    overlayDirty = true
+  }
+
+
+  fun updateLayout(layout: String) {
+    val full = RectF(0f, 0f, 1f, 1f)
+    val pip = RectF(0.72f, 0.68f, 0.97f, 0.97f)
+    when (layout) {
+      "pastorOnly" -> {
+        pastorVisible = true
+        crowdVisible = false
+        pastorRect = full
+        crowdRect = pip
+      }
+      "crowdOnly" -> {
+        pastorVisible = false
+        crowdVisible = true
+        pastorRect = pip
+        crowdRect = full
+      }
+      "pastorInCrowd" -> {
+        pastorVisible = true
+        crowdVisible = true
+        pastorRect = full
+        crowdRect = pip
+      }
+      "crowdInPastor" -> {
+        pastorVisible = true
+        crowdVisible = true
+        pastorRect = pip
+        crowdRect = full
+      }
+    }
     overlayDirty = true
   }
 
   override fun drawFilter() {
+    if (tickerText.isNotBlank()) overlayDirty = true
     val pastor = frameHub.latestFrame("pastor")
     val crowd = frameHub.latestFrame("crowd")
     if (pastor !== uploadedPastor) {
@@ -214,8 +252,9 @@ class OpenGLCompositor(
       crowdRect.width(),
       crowdRect.height()
     )
-    GLES20.glUniform1f(hasPastorHandle, if (pastor == null) 0f else 1f)
-    GLES20.glUniform1f(hasCrowdHandle, if (crowd == null) 0f else 1f)
+    GLES20.glUniform1f(hasPastorHandle, if (pastor != null && pastorVisible) 1f else 0f)
+    GLES20.glUniform1f(hasCrowdHandle, if (crowd != null && crowdVisible) 1f else 0f)
+    GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
   }
 
   override fun disableResources() {
@@ -337,7 +376,11 @@ class OpenGLCompositor(
       paint.color = Color.WHITE
       paint.textSize = 28f
       paint.textAlign = Paint.Align.LEFT
-      canvas.drawText(tickerText.take(140), 36f, 700f, paint)
+      val cycle = paint.measureText(tickerText.take(140)) + 80f
+      val offset = ((System.nanoTime() / 1_000_000_000.0 * 120.0) % cycle.toDouble()).toFloat()
+      val x = OUTPUT_WIDTH - offset
+      canvas.drawText(tickerText.take(140), x, 700f, paint)
+      canvas.drawText(tickerText.take(140), x + cycle, 700f, paint)
     }
 
     logo?.let { source ->
@@ -349,7 +392,7 @@ class OpenGLCompositor(
       canvas.drawBitmap(
         source,
         null,
-        RectF(OUTPUT_WIDTH - width - 28f, 24f, OUTPUT_WIDTH - 28f, 24f + height),
+        RectF(28f, 24f, 28f + width, 24f + height),
         paint
       )
     }

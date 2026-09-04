@@ -52,6 +52,7 @@ class NativeStreamingService {
     String lyrics = '',
     String ticker = '',
     Uint8List? logoBytes,
+    String layout = 'pastorOnly',
   }) async {
     try {
       await _channel.invokeMethod('startStream', {
@@ -60,6 +61,7 @@ class NativeStreamingService {
         'lyrics': lyrics.isNotEmpty ? lyrics : overlayText,
         'ticker': ticker,
         'logoBytes': logoBytes,
+        'layout': layout,
       });
       return true;
     } catch (error) {
@@ -72,12 +74,14 @@ class NativeStreamingService {
     String lyrics = '',
     String ticker = '',
     Uint8List? logoBytes,
+    String? layout,
   }) async {
     try {
       await _channel.invokeMethod('updateScene', {
         'lyrics': lyrics,
         'ticker': ticker,
         'logoBytes': logoBytes,
+        'layout': layout,
       });
       return true;
     } catch (error) {
@@ -120,6 +124,7 @@ class StreamingService {
     String lyrics = '',
     String ticker = '',
     Uint8List? logoBytes,
+    String layout = 'pastorOnly',
   }) =>
       NativeStreamingService.startStream(
         url: url,
@@ -128,17 +133,20 @@ class StreamingService {
         lyrics: lyrics,
         ticker: ticker,
         logoBytes: logoBytes,
+        layout: layout,
       );
 
   static Future<bool> updateScene({
     String lyrics = '',
     String ticker = '',
     Uint8List? logoBytes,
+    String? layout,
   }) =>
       NativeStreamingService.updateScene(
         lyrics: lyrics,
         ticker: ticker,
         logoBytes: logoBytes,
+        layout: layout,
       );
 
   static Future<void> stopStream() => NativeStreamingService.stopStream();

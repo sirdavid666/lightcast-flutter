@@ -58,6 +58,7 @@ class StreamingService : Service() {
     private const val EXTRA_LYRICS = "lyrics"
     private const val EXTRA_TICKER = "ticker"
     private const val EXTRA_LOGO = "logo"
+    private const val EXTRA_LAYOUT = "layout"
     private const val EXTRA_MID = "mid"
     private const val EXTRA_LINE_INDEX = "lineIndex"
 
@@ -99,7 +100,8 @@ class StreamingService : Service() {
       streamKey: String,
       lyrics: String,
       ticker: String,
-      logo: ByteArray?
+      logo: ByteArray?,
+      layout: String = "pastorOnly"
     ) {
       dispatch(
         context,
@@ -110,6 +112,7 @@ class StreamingService : Service() {
           .putExtra(EXTRA_LYRICS, lyrics)
           .putExtra(EXTRA_TICKER, ticker)
           .putExtra(EXTRA_LOGO, logo)
+          .putExtra(EXTRA_LAYOUT, layout)
       )
     }
 
@@ -117,16 +120,16 @@ class StreamingService : Service() {
       context: Context,
       lyrics: String,
       ticker: String,
-      logo: ByteArray?
+      logo: ByteArray?,
+      layout: String? = null
     ) {
-      dispatch(
-        context,
-        Intent(context, StreamingService::class.java)
-          .setAction(ACTION_SCENE)
-          .putExtra(EXTRA_LYRICS, lyrics)
-          .putExtra(EXTRA_TICKER, ticker)
-          .putExtra(EXTRA_LOGO, logo)
-      )
+      val sceneIntent = Intent(context, StreamingService::class.java)
+        .setAction(ACTION_SCENE)
+        .putExtra(EXTRA_LYRICS, lyrics)
+        .putExtra(EXTRA_TICKER, ticker)
+        .putExtra(EXTRA_LOGO, logo)
+      layout?.let { sceneIntent.putExtra(EXTRA_LAYOUT, it) }
+      dispatch(context, sceneIntent)
     }
 
     fun stopStreaming(context: Context) {
@@ -181,7 +184,8 @@ class StreamingService : Service() {
         intent.getStringExtra(EXTRA_STREAM_KEY).orEmpty(),
         intent.getStringExtra(EXTRA_LYRICS).orEmpty(),
         intent.getStringExtra(EXTRA_TICKER).orEmpty(),
-        intent.getByteArrayExtra(EXTRA_LOGO)
+        intent.getByteArrayExtra(EXTRA_LOGO),
+        intent.getStringExtra(EXTRA_LAYOUT).orEmpty()
       )
       ACTION_OFFER -> handleOfferInternal(
         intent.getStringExtra(EXTRA_ROLE).orEmpty(),
@@ -196,7 +200,8 @@ class StreamingService : Service() {
       ACTION_SCENE -> updateSceneInternal(
         intent.getStringExtra(EXTRA_LYRICS).orEmpty(),
         intent.getStringExtra(EXTRA_TICKER).orEmpty(),
-        intent.getByteArrayExtra(EXTRA_LOGO)
+        intent.getByteArrayExtra(EXTRA_LOGO),
+        intent.getStringExtra(EXTRA_LAYOUT)
       )
       ACTION_STOP -> {
         stopPublisher()
@@ -223,7 +228,8 @@ class StreamingService : Service() {
     streamKey: String,
     lyrics: String,
     ticker: String,
-    logoBytes: ByteArray?
+    logoBytes: ByteArray?,
+    layout: String
   ) {
     if (baseUrl.isBlank() || streamKey.isBlank()) {
       Log.e(TAG, "Cannot start RTMPS without URL and stream key")
@@ -267,7 +273,7 @@ class StreamingService : Service() {
     )
 
     val activeCompositor = OpenGLCompositor(frameHub, lyrics, ticker).also {
-      it.updateScene(lyrics, ticker, overlayLogo)
+      it.updateScene(lyrics, ticker, overlayLogo, layout = layout)
     }
     compositor = activeCompositor
     output.getGlInterface().setFilter(activeCompositor)
@@ -285,10 +291,14 @@ class StreamingService : Service() {
     updateNotification("Native engine idle")
   }
 
-  private fun updateSceneInternal(lyrics: String, ticker: String, logoBytes: ByteArray?) {
+  private fun updateSceneInternal(lyrics: String, ticker: String, logoBytes: ByteArray?, layout: String?) {
     if (!::frameHub.isInitialized) return
     val bitmap = logoBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
-    compositor?.updateScene(lyrics, ticker, bitmap)
+    if (bitmap != null) {
+      compositor?.updateScene(lyrics, ticker, bitmap, layout = layout)
+    } else {
+      compositor?.updateScene(lyrics, ticker, layout = layout)
+    }
   }
 
   private fun handleOfferInternal(role: String, sdp: String) {

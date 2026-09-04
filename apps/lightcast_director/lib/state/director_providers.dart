@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:lightcast_shared/lightcast_shared.dart';
+import '../services/native_streaming_service.dart';
 
 // Provider to access the WebRTC transport from main.dart
 final webrtcTransportProvider = Provider<RTCVideoRenderer?>((ref) => null);
@@ -30,11 +33,11 @@ class ProductionController extends StateNotifier<ProductionState> {
     final pastor = layout != CameraLayout.crowdOnly;
     final crowd = layout != CameraLayout.pastorOnly;
 
-    final pastorFrame = layout == CameraLayout.pastorInCrowd
+    final pastorFrame = layout == CameraLayout.crowdInPastor
         ? const NormalizedRect(x: .72, y: .68, width: .25, height: .25)
         : const NormalizedRect(x: 0, y: 0, width: 1, height: 1);
 
-    final crowdFrame = layout == CameraLayout.crowdInPastor
+    final crowdFrame = layout == CameraLayout.pastorInCrowd
         ? const NormalizedRect(x: .72, y: .68, width: .25, height: .25)
         : const NormalizedRect(x: 0, y: 0, width: 1, height: 1);
 
@@ -51,6 +54,7 @@ class ProductionController extends StateNotifier<ProductionState> {
     );
 
     state = state.copyWith(layout: layout, previewScene: scene);
+    _syncNativeScene();
   }
 
   void toggleLayer(LayerKind kind) {
@@ -70,6 +74,7 @@ class ProductionController extends StateNotifier<ProductionState> {
       (layer) => layer.copyWith(payload: {'text': text, 'size': lyrics.fontSize}),
     );
     state = state.copyWith(lyrics: lyrics, previewScene: scene);
+    _syncNativeScene();
   }
 
   void setScriptureText(String text) {
@@ -92,6 +97,7 @@ class ProductionController extends StateNotifier<ProductionState> {
       (layer) => layer.copyWith(payload: {'text': text}),
     );
     state = state.copyWith(ticker: ticker, previewScene: scene);
+    _syncNativeScene();
   }
 
   void setLowerThird({String? name, String? title}) {
@@ -105,6 +111,17 @@ class ProductionController extends StateNotifier<ProductionState> {
     );
     state = state.copyWith(lowerThird: lower, previewScene: scene);
   }
+
+  void _syncNativeScene() {
+    if (state.liveStatus != 'LIVE') return;
+    unawaited(NativeStreamingService.updateScene(
+      lyrics: state.lyrics.text,
+      ticker: state.ticker.text,
+      layout: state.layout.name,
+    ));
+  }
+
+  void setStreamUrl(String url) => state = state.copyWith(streamUrl: url);
 
   void setStreamKey(String key) => state = state.copyWith(streamKey: key);
 
