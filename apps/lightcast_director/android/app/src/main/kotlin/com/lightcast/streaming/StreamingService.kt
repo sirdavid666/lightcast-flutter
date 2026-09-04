@@ -58,8 +58,13 @@ class StreamingService : Service() {
     private const val EXTRA_URL = "url"
     private const val EXTRA_STREAM_KEY = "streamKey"
     private const val EXTRA_LYRICS = "lyrics"
+    private const val EXTRA_SCRIPTURE = "scripture"
+    private const val EXTRA_SCRIPTURE_REFERENCE = "scriptureReference"
     private const val EXTRA_TICKER = "ticker"
     private const val EXTRA_LOGO = "logo"
+    private const val EXTRA_SHOW_LYRICS = "showLyrics"
+    private const val EXTRA_SHOW_SCRIPTURE = "showScripture"
+    private const val EXTRA_SHOW_TICKER = "showTicker"
     private const val EXTRA_LAYOUT = "layout"
     private const val EXTRA_MID = "mid"
     private const val EXTRA_LINE_INDEX = "lineIndex"
@@ -133,8 +138,13 @@ class StreamingService : Service() {
       url: String,
       streamKey: String,
       lyrics: String,
+      scripture: String,
+      scriptureReference: String,
       ticker: String,
       logo: ByteArray?,
+      showLyrics: Boolean,
+      showScripture: Boolean,
+      showTicker: Boolean,
       layout: String = "pastorOnly"
     ) {
       dispatch(
@@ -144,8 +154,13 @@ class StreamingService : Service() {
           .putExtra(EXTRA_URL, url)
           .putExtra(EXTRA_STREAM_KEY, streamKey)
           .putExtra(EXTRA_LYRICS, lyrics)
+          .putExtra(EXTRA_SCRIPTURE, scripture)
+          .putExtra(EXTRA_SCRIPTURE_REFERENCE, scriptureReference)
           .putExtra(EXTRA_TICKER, ticker)
           .putExtra(EXTRA_LOGO, logo)
+          .putExtra(EXTRA_SHOW_LYRICS, showLyrics)
+          .putExtra(EXTRA_SHOW_SCRIPTURE, showScripture)
+          .putExtra(EXTRA_SHOW_TICKER, showTicker)
           .putExtra(EXTRA_LAYOUT, layout)
       )
     }
@@ -153,15 +168,25 @@ class StreamingService : Service() {
     fun updateScene(
       context: Context,
       lyrics: String,
+      scripture: String,
+      scriptureReference: String,
       ticker: String,
       logo: ByteArray?,
+      showLyrics: Boolean,
+      showScripture: Boolean,
+      showTicker: Boolean,
       layout: String? = null
     ) {
       val sceneIntent = Intent(context, StreamingService::class.java)
         .setAction(ACTION_SCENE)
         .putExtra(EXTRA_LYRICS, lyrics)
+        .putExtra(EXTRA_SCRIPTURE, scripture)
+        .putExtra(EXTRA_SCRIPTURE_REFERENCE, scriptureReference)
         .putExtra(EXTRA_TICKER, ticker)
         .putExtra(EXTRA_LOGO, logo)
+        .putExtra(EXTRA_SHOW_LYRICS, showLyrics)
+        .putExtra(EXTRA_SHOW_SCRIPTURE, showScripture)
+        .putExtra(EXTRA_SHOW_TICKER, showTicker)
       layout?.let { sceneIntent.putExtra(EXTRA_LAYOUT, it) }
       dispatch(context, sceneIntent)
     }
@@ -217,8 +242,13 @@ class StreamingService : Service() {
         intent.getStringExtra(EXTRA_URL).orEmpty(),
         intent.getStringExtra(EXTRA_STREAM_KEY).orEmpty(),
         intent.getStringExtra(EXTRA_LYRICS).orEmpty(),
+        intent.getStringExtra(EXTRA_SCRIPTURE).orEmpty(),
+        intent.getStringExtra(EXTRA_SCRIPTURE_REFERENCE).orEmpty(),
         intent.getStringExtra(EXTRA_TICKER).orEmpty(),
         intent.getByteArrayExtra(EXTRA_LOGO),
+        intent.getBooleanExtra(EXTRA_SHOW_LYRICS, false),
+        intent.getBooleanExtra(EXTRA_SHOW_SCRIPTURE, false),
+        intent.getBooleanExtra(EXTRA_SHOW_TICKER, true),
         intent.getStringExtra(EXTRA_LAYOUT).orEmpty()
       )
       ACTION_OFFER -> handleOfferInternal(
@@ -233,8 +263,13 @@ class StreamingService : Service() {
       )
       ACTION_SCENE -> updateSceneInternal(
         intent.getStringExtra(EXTRA_LYRICS).orEmpty(),
+        intent.getStringExtra(EXTRA_SCRIPTURE).orEmpty(),
+        intent.getStringExtra(EXTRA_SCRIPTURE_REFERENCE).orEmpty(),
         intent.getStringExtra(EXTRA_TICKER).orEmpty(),
         intent.getByteArrayExtra(EXTRA_LOGO),
+        intent.getBooleanExtra(EXTRA_SHOW_LYRICS, false),
+        intent.getBooleanExtra(EXTRA_SHOW_SCRIPTURE, false),
+        intent.getBooleanExtra(EXTRA_SHOW_TICKER, true),
         intent.getStringExtra(EXTRA_LAYOUT)
       )
       ACTION_STOP -> {
@@ -266,8 +301,13 @@ class StreamingService : Service() {
     baseUrl: String,
     streamKey: String,
     lyrics: String,
+    scripture: String,
+    scriptureReference: String,
     ticker: String,
     logoBytes: ByteArray?,
+    showLyrics: Boolean,
+    showScripture: Boolean,
+    showTicker: Boolean,
     layout: String
   ) {
     if (baseUrl.isBlank() || streamKey.isBlank()) {
@@ -312,7 +352,17 @@ class StreamingService : Service() {
     )
 
     val activeCompositor = OpenGLCompositor(frameHub, lyrics, ticker).also {
-      it.updateScene(lyrics, ticker, overlayLogo, layout = layout)
+      it.updateScene(
+        lyrics,
+        ticker,
+        overlayLogo,
+        layout = layout,
+        scripture = scripture,
+        scriptureReference = scriptureReference,
+        showLyrics = showLyrics,
+        showScripture = showScripture,
+        showTicker = showTicker
+      )
     }
     compositor = activeCompositor
     output.getGlInterface().setFilter(activeCompositor)
@@ -330,13 +380,42 @@ class StreamingService : Service() {
     updateNotification("Native engine idle")
   }
 
-  private fun updateSceneInternal(lyrics: String, ticker: String, logoBytes: ByteArray?, layout: String?) {
+  private fun updateSceneInternal(
+    lyrics: String,
+    scripture: String,
+    scriptureReference: String,
+    ticker: String,
+    logoBytes: ByteArray?,
+    showLyrics: Boolean,
+    showScripture: Boolean,
+    showTicker: Boolean,
+    layout: String?
+  ) {
     if (!::frameHub.isInitialized) return
     val bitmap = logoBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
     if (bitmap != null) {
-      compositor?.updateScene(lyrics, ticker, bitmap, layout = layout)
+      compositor?.updateScene(
+        lyrics,
+        ticker,
+        bitmap,
+        layout = layout,
+        scripture = scripture,
+        scriptureReference = scriptureReference,
+        showLyrics = showLyrics,
+        showScripture = showScripture,
+        showTicker = showTicker
+      )
     } else {
-      compositor?.updateScene(lyrics, ticker, layout = layout)
+      compositor?.updateScene(
+        lyrics,
+        ticker,
+        layout = layout,
+        scripture = scripture,
+        scriptureReference = scriptureReference,
+        showLyrics = showLyrics,
+        showScripture = showScripture,
+        showTicker = showTicker
+      )
     }
   }
 
