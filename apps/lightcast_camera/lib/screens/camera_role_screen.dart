@@ -121,6 +121,7 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
     with WidgetsBindingObserver {
   LanCameraTransport? _transport;
   String? _cameraError;
+  bool _isConnecting = false;
   final _directorIpController = TextEditingController();
 
   @override
@@ -131,32 +132,58 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
   }
 
   Future<void> _connectToDirector() async {
+    if (_isConnecting) return;
+    setState(() {
+      _isConnecting = true;
+      _cameraError = null;
+    });
+    final role = ref.read(cameraProvider).role == CameraRole.pastor ? 'pastor' : 'crowd';
+    final transport = LanCameraTransport(
+      role: role,
+      onStateChanged: (status, error) {
+        if (!mounted) return;
+        setState(() {
+          if (status == CameraTransportStatus.connected) {
+            _isConnecting = false;
+            _cameraError = null;
+          } else if (status == CameraTransportStatus.failed) {
+            _isConnecting = false;
+            _cameraError = error ?? 'Connection failed';
+            _transport = null;
+          } else if (status == CameraTransportStatus.disconnected) {
+            _isConnecting = false;
+            _transport = null;
+          }
+        });
+        ref.read(cameraProvider.notifier).setConnected(
+              status == CameraTransportStatus.connected,
+            );
+      },
+    );
     try {
-      await _transport?.stop();
-      final role = ref.read(cameraProvider).role == CameraRole.pastor
-          ? 'pastor'
-          : 'crowd';
-      final transport = LanCameraTransport(role: role);
       await transport.start(_directorIpController.text.trim());
       if (!mounted) {
         await transport.stop();
         return;
       }
-      setState(() {
-        _transport = transport;
-        _cameraError = null;
-      });
-      ref.read(cameraProvider.notifier).setConnected(true);
+      setState(() => _transport = transport);
     } catch (error) {
       if (mounted) {
-        setState(() => _cameraError = 'Connection failed: $error');
+        setState(() {
+          _isConnecting = false;
+          _cameraError = 'Connection failed: $error';
+        });
       }
+      ref.read(cameraProvider.notifier).setConnected(false);
     }
   }
 
   Future<void> _disconnectFromDirector() async {
     await _transport?.stop();
-    if (mounted) setState(() => _transport = null);
+    if (mounted) setState(() {
+      _transport = null;
+      _isConnecting = false;
+    });
     ref.read(cameraProvider.notifier).setConnected(false);
   }
 
@@ -173,7 +200,10 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
     if (state == AppLifecycleState.inactive) {
       _transport?.stop();
       if (mounted) {
-        setState(() => _transport = null);
+        setState(() {
+          _transport = null;
+          _isConnecting = false;
+        });
         ref.read(cameraProvider.notifier).setConnected(false);
       }
     }
@@ -252,7 +282,9 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
                       child: Text(
                         _transport?.localRenderer.srcObject != null
                             ? 'REAL CAMERA • WEBRTC'
-                            : 'NOT CONNECTED',
+                            : _isConnecting
+                                ? 'CONNECTING TO DIRECTOR...'
+                                : 'NOT CONNECTED',
                         style: TextStyle(
                           color: Colors.white.withOpacity(.75),
                         ),
@@ -293,7 +325,13 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
                           ? _disconnectFromDirector
                           : _connectToDirector,
                       icon: Icon(state.connected ? Icons.stop : Icons.link),
-                      label: Text(state.connected ? 'STOP SENDING FEED' : 'CONNECT TO DIRECTOR'),
+                      label: Text(
+                         _isConnecting
+                             ? 'CONNECTING...'
+                             : state.connected
+                                 ? 'STOP SENDING FEED'
+                                 : 'CONNECT TO DIRECTOR',
+                       ),
                     ),
                   ),
                   const SizedBox(height: 8),
