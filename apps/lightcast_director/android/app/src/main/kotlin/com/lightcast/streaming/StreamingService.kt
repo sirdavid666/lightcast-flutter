@@ -451,14 +451,14 @@ class StreamingService : Service() {
   }
 
   private class SimpleSdpObserver(
-    private val onSetSuccess: () -> Unit = {},
+    private val onSetSuccessCallback: () -> Unit = {},
     private val onCreateSuccess: (SessionDescription) -> Unit = {},
     private val onFailure: (String) -> Unit = {}
   ) : SdpObserver {
     override fun onCreateSuccess(description: SessionDescription?) {
       description?.let(onCreateSuccess)
     }
-    override fun onSetSuccess() = onSetSuccess()
+    override fun onSetSuccess(): Unit = onSetSuccessCallback()
     override fun onCreateFailure(error: String?) = onFailure(error.orEmpty())
     override fun onSetFailure(error: String?) = onFailure(error.orEmpty())
   }
