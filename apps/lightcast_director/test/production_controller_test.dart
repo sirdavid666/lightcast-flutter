@@ -13,6 +13,41 @@ void main() {
     expect(programPastor.frame.x, .72);
   });
 
+  test('overlay toggles update the Program scene', () {
+    final controller = ProductionController();
+
+    controller.toggleLayer(LayerKind.ticker);
+    expect(
+      controller.state.programScene.layers
+          .firstWhere((layer) => layer.kind == LayerKind.ticker)
+          .visible,
+      isFalse,
+    );
+
+    controller.toggleLayer(LayerKind.lyrics);
+    expect(
+      controller.state.programScene.layers
+          .firstWhere((layer) => layer.kind == LayerKind.lyrics)
+          .visible,
+      isTrue,
+    );
+  });
+
+  test('scripture reference and text update together', () {
+    final controller = ProductionController();
+    controller.setScriptureReference('Psalm 23:1');
+    controller.setScriptureText('The Lord is my shepherd.');
+
+    expect(controller.state.scripture.reference, 'Psalm 23:1');
+    expect(controller.state.scripture.text, 'The Lord is my shepherd.');
+    expect(
+      controller.state.programScene.layers
+          .firstWhere((layer) => layer.kind == LayerKind.scripture)
+          .payload['text'],
+      'The Lord is my shepherd.',
+    );
+  });
+
   test('ticker edits update Program immediately', () {
     final controller = ProductionController();
     controller.setTickerText('WELCOME TO LIGHTCAST');
