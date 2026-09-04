@@ -24,3 +24,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
+  # This section tells Flutter to include your images folder
+  assets:
+    - assets/images/
