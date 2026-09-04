@@ -308,13 +308,13 @@ class StreamingService : Service() {
 
     peer.setRemoteDescription(
       SimpleSdpObserver(
-        onSetSuccess = {
+        onSetSuccessCallback = {
           peer.createAnswer(
             SimpleSdpObserver(
               onCreateSuccess = { answer ->
                 peer.setLocalDescription(
                   SimpleSdpObserver(
-                    onSetSuccess = { waitForIceAndAnswer(role) },
+                    onSetSuccessCallback = { waitForIceAndAnswer(role) },
                     onFailure = { error -> Log.e(TAG, "Local SDP failed for $role: $error") }
                   ),
                   answer
