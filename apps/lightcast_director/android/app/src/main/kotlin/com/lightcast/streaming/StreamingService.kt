@@ -64,16 +64,37 @@ class StreamingService : Service() {
 
     private var service: StreamingService? = null
     private val answerCallbacks = ConcurrentHashMap<String, (String) -> Unit>()
+    private val errorCallbacks = ConcurrentHashMap<String, (String) -> Unit>()
+    private val pendingCandidates = ConcurrentHashMap<String, MutableList<IceCandidate>>()
+    private val remoteDescriptions = ConcurrentHashMap.newKeySet<String>()
 
-    fun requestOffer(context: Context, role: String, sdp: String, callback: (String) -> Unit) {
+    fun requestOffer(
+      context: Context,
+      role: String,
+      sdp: String,
+      callback: (String) -> Unit,
+      onError: (String) -> Unit,
+    ) {
       answerCallbacks[role] = callback
-      dispatch(
-        context,
-        Intent(context, StreamingService::class.java)
-          .setAction(ACTION_OFFER)
-          .putExtra(EXTRA_ROLE, role)
-          .putExtra(EXTRA_SDP, sdp)
-      )
+      errorCallbacks[role] = onError
+      try {
+        dispatch(
+          context,
+          Intent(context, StreamingService::class.java)
+            .setAction(ACTION_OFFER)
+            .putExtra(EXTRA_ROLE, role)
+            .putExtra(EXTRA_SDP, sdp)
+        )
+      } catch (error: Exception) {
+        answerCallbacks.remove(role)
+        errorCallbacks.remove(role)
+        onError(error.message ?: "Could not start native streaming service")
+      }
+    }
+
+    private fun fail(role: String, message: String) {
+      answerCallbacks.remove(role)
+      errorCallbacks.remove(role)?.invoke(message)
     }
 
     fun addIceCandidate(
@@ -217,6 +238,10 @@ class StreamingService : Service() {
     stopPublisher()
     peers.values.forEach { it.dispose() }
     peers.clear()
+    pendingCandidates.clear()
+    remoteDescriptions.clear()
+    answerCallbacks.clear()
+    errorCallbacks.clear()
     if (::peerFactory.isInitialized) peerFactory.dispose()
     if (::eglBase.isInitialized) eglBase.release()
     service = null
@@ -302,7 +327,16 @@ class StreamingService : Service() {
   }
 
   private fun handleOfferInternal(role: String, sdp: String) {
-    if (role.isBlank() || sdp.isBlank()) return
+    if (role.isBlank() || sdp.isBlank()) {
+      fail(role, "Offer is empty")
+      return
+    }
+    if (!::peerFactory.isInitialized) {
+      fail(role, "Native WebRTC engine is not initialized")
+      return
+    }
+    remoteDescriptions.remove(role)
+    pendingCandidates.remove(role)
     peers.remove(role)?.dispose()
 
     val configuration = PeerConnection.RTCConfiguration(
@@ -313,7 +347,10 @@ class StreamingService : Service() {
     val peer = peerFactory.createPeerConnection(
       configuration,
       peerObserver(role)
-    ) ?: return
+    ) ?: run {
+      fail(role, "Could not create native peer connection")
+      return
+    }
     peers[role] = peer
 
     peer.setRemoteDescription(
@@ -351,12 +388,24 @@ class StreamingService : Service() {
   }
 
   private fun sendAnswer(role: String) {
-    val answer = peers[role]?.localDescription?.description ?: return
+    val answer = peers[role]?.localDescription?.description
+    if (answer.isNullOrBlank()) {
+      fail(role, "Native peer produced no SDP answer")
+      return
+    }
+    errorCallbacks.remove(role)
     answerCallbacks.remove(role)?.invoke(answer)
   }
 
   private fun addCandidateInternal(role: String, sdp: String, mid: String?, lineIndex: Int) {
-    peers[role]?.addIceCandidate(IceCandidate(mid, lineIndex, sdp))
+    if (sdp.isBlank()) return
+    val candidate = IceCandidate(mid, lineIndex, sdp)
+    val peer = peers[role]
+    if (peer != null && remoteDescriptions.contains(role)) {
+      peer.addIceCandidate(candidate)
+    } else {
+      pendingCandidates.getOrPut(role) { mutableListOf() }.add(candidate)
+    }
   }
 
   private fun peerObserver(role: String) = object : PeerConnection.Observer {
