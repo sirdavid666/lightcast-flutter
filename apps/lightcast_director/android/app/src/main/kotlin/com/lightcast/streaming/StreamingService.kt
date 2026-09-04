@@ -60,10 +60,13 @@ class StreamingService : Service() {
     private const val EXTRA_LYRICS = "lyrics"
     private const val EXTRA_SCRIPTURE = "scripture"
     private const val EXTRA_SCRIPTURE_REFERENCE = "scriptureReference"
+    private const val EXTRA_LOWER_THIRD_NAME = "lowerThirdName"
+    private const val EXTRA_LOWER_THIRD_TITLE = "lowerThirdTitle"
     private const val EXTRA_TICKER = "ticker"
     private const val EXTRA_LOGO = "logo"
     private const val EXTRA_SHOW_LYRICS = "showLyrics"
     private const val EXTRA_SHOW_SCRIPTURE = "showScripture"
+    private const val EXTRA_SHOW_LOWER_THIRD = "showLowerThird"
     private const val EXTRA_SHOW_TICKER = "showTicker"
     private const val EXTRA_LAYOUT = "layout"
     private const val EXTRA_MID = "mid"
@@ -140,10 +143,13 @@ class StreamingService : Service() {
       lyrics: String,
       scripture: String,
       scriptureReference: String,
+      lowerThirdName: String,
+      lowerThirdTitle: String,
       ticker: String,
       logo: ByteArray?,
       showLyrics: Boolean,
       showScripture: Boolean,
+      showLowerThird: Boolean,
       showTicker: Boolean,
       layout: String = "pastorOnly"
     ) {
@@ -156,10 +162,13 @@ class StreamingService : Service() {
           .putExtra(EXTRA_LYRICS, lyrics)
           .putExtra(EXTRA_SCRIPTURE, scripture)
           .putExtra(EXTRA_SCRIPTURE_REFERENCE, scriptureReference)
+          .putExtra(EXTRA_LOWER_THIRD_NAME, lowerThirdName)
+          .putExtra(EXTRA_LOWER_THIRD_TITLE, lowerThirdTitle)
           .putExtra(EXTRA_TICKER, ticker)
           .putExtra(EXTRA_LOGO, logo)
           .putExtra(EXTRA_SHOW_LYRICS, showLyrics)
           .putExtra(EXTRA_SHOW_SCRIPTURE, showScripture)
+          .putExtra(EXTRA_SHOW_LOWER_THIRD, showLowerThird)
           .putExtra(EXTRA_SHOW_TICKER, showTicker)
           .putExtra(EXTRA_LAYOUT, layout)
       )
@@ -170,10 +179,13 @@ class StreamingService : Service() {
       lyrics: String,
       scripture: String,
       scriptureReference: String,
+      lowerThirdName: String,
+      lowerThirdTitle: String,
       ticker: String,
       logo: ByteArray?,
       showLyrics: Boolean,
       showScripture: Boolean,
+      showLowerThird: Boolean,
       showTicker: Boolean,
       layout: String? = null
     ) {
@@ -182,10 +194,13 @@ class StreamingService : Service() {
         .putExtra(EXTRA_LYRICS, lyrics)
         .putExtra(EXTRA_SCRIPTURE, scripture)
         .putExtra(EXTRA_SCRIPTURE_REFERENCE, scriptureReference)
+        .putExtra(EXTRA_LOWER_THIRD_NAME, lowerThirdName)
+        .putExtra(EXTRA_LOWER_THIRD_TITLE, lowerThirdTitle)
         .putExtra(EXTRA_TICKER, ticker)
         .putExtra(EXTRA_LOGO, logo)
         .putExtra(EXTRA_SHOW_LYRICS, showLyrics)
         .putExtra(EXTRA_SHOW_SCRIPTURE, showScripture)
+        .putExtra(EXTRA_SHOW_LOWER_THIRD, showLowerThird)
         .putExtra(EXTRA_SHOW_TICKER, showTicker)
       layout?.let { sceneIntent.putExtra(EXTRA_LAYOUT, it) }
       dispatch(context, sceneIntent)
@@ -244,10 +259,13 @@ class StreamingService : Service() {
         intent.getStringExtra(EXTRA_LYRICS).orEmpty(),
         intent.getStringExtra(EXTRA_SCRIPTURE).orEmpty(),
         intent.getStringExtra(EXTRA_SCRIPTURE_REFERENCE).orEmpty(),
+        intent.getStringExtra(EXTRA_LOWER_THIRD_NAME).orEmpty(),
+        intent.getStringExtra(EXTRA_LOWER_THIRD_TITLE).orEmpty(),
         intent.getStringExtra(EXTRA_TICKER).orEmpty(),
         intent.getByteArrayExtra(EXTRA_LOGO),
         intent.getBooleanExtra(EXTRA_SHOW_LYRICS, false),
         intent.getBooleanExtra(EXTRA_SHOW_SCRIPTURE, false),
+        intent.getBooleanExtra(EXTRA_SHOW_LOWER_THIRD, false),
         intent.getBooleanExtra(EXTRA_SHOW_TICKER, true),
         intent.getStringExtra(EXTRA_LAYOUT).orEmpty()
       )
@@ -265,10 +283,13 @@ class StreamingService : Service() {
         intent.getStringExtra(EXTRA_LYRICS).orEmpty(),
         intent.getStringExtra(EXTRA_SCRIPTURE).orEmpty(),
         intent.getStringExtra(EXTRA_SCRIPTURE_REFERENCE).orEmpty(),
+        intent.getStringExtra(EXTRA_LOWER_THIRD_NAME).orEmpty(),
+        intent.getStringExtra(EXTRA_LOWER_THIRD_TITLE).orEmpty(),
         intent.getStringExtra(EXTRA_TICKER).orEmpty(),
         intent.getByteArrayExtra(EXTRA_LOGO),
         intent.getBooleanExtra(EXTRA_SHOW_LYRICS, false),
         intent.getBooleanExtra(EXTRA_SHOW_SCRIPTURE, false),
+        intent.getBooleanExtra(EXTRA_SHOW_LOWER_THIRD, false),
         intent.getBooleanExtra(EXTRA_SHOW_TICKER, true),
         intent.getStringExtra(EXTRA_LAYOUT)
       )
@@ -303,10 +324,13 @@ class StreamingService : Service() {
     lyrics: String,
     scripture: String,
     scriptureReference: String,
+    lowerThirdName: String,
+    lowerThirdTitle: String,
     ticker: String,
     logoBytes: ByteArray?,
     showLyrics: Boolean,
     showScripture: Boolean,
+    showLowerThird: Boolean,
     showTicker: Boolean,
     layout: String
   ) {
@@ -359,8 +383,11 @@ class StreamingService : Service() {
         layout = layout,
         scripture = scripture,
         scriptureReference = scriptureReference,
+        lowerThirdName = lowerThirdName,
+        lowerThirdTitle = lowerThirdTitle,
         showLyrics = showLyrics,
         showScripture = showScripture,
+        showLowerThird = showLowerThird,
         showTicker = showTicker
       )
     }
@@ -384,10 +411,13 @@ class StreamingService : Service() {
     lyrics: String,
     scripture: String,
     scriptureReference: String,
+    lowerThirdName: String,
+    lowerThirdTitle: String,
     ticker: String,
     logoBytes: ByteArray?,
     showLyrics: Boolean,
     showScripture: Boolean,
+    showLowerThird: Boolean,
     showTicker: Boolean,
     layout: String?
   ) {
@@ -401,6 +431,8 @@ class StreamingService : Service() {
         layout = layout,
         scripture = scripture,
         scriptureReference = scriptureReference,
+        lowerThirdName = lowerThirdName,
+        lowerThirdTitle = lowerThirdTitle,
         showLyrics = showLyrics,
         showScripture = showScripture,
         showTicker = showTicker
@@ -412,6 +444,8 @@ class StreamingService : Service() {
         layout = layout,
         scripture = scripture,
         scriptureReference = scriptureReference,
+        lowerThirdName = lowerThirdName,
+        lowerThirdTitle = lowerThirdTitle,
         showLyrics = showLyrics,
         showScripture = showScripture,
         showTicker = showTicker
