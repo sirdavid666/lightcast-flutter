@@ -184,7 +184,6 @@ class StreamingService : Service() {
   private lateinit var frameHub: WebRtcFrameHub
   private lateinit var audioMixer: AudioMixer
   private val peers = ConcurrentHashMap<String, PeerConnection>()
-  private val attachedVideoTracks = ConcurrentHashMap.newKeySet<String>()
   private val attachedAudioTracks = ConcurrentHashMap.newKeySet<String>()
   private val videoTracks = ConcurrentHashMap<String, VideoTrack>()
   private var publisher: RtmpStream? = null
@@ -350,6 +349,7 @@ class StreamingService : Service() {
       fail(role, "Native WebRTC engine is not initialized")
       return
     }
+    resetCameraMedia(role)
     remoteDescriptions.remove(role)
     pendingCandidates.remove(role)
     peers.remove(role)?.dispose()
@@ -478,12 +478,22 @@ class StreamingService : Service() {
   }
 
   private fun attachVideo(role: String, track: VideoTrack) {
-    val key = "$role:${track.id()}"
-    if (attachedVideoTracks.add(key)) {
-      videoTracks[role] = track
-      frameHub.attachVideo(role, track)
-      registeredRenderers[role]?.forEach { track.addSink(it) }
+    val previous = videoTracks.put(role, track)
+    if (previous === track) return
+
+    previous?.let { oldTrack ->
+      registeredRenderers[role]?.forEach { renderer -> oldTrack.removeSink(renderer) }
     }
+    frameHub.attachVideo(role, track)
+    registeredRenderers[role]?.forEach { renderer -> track.addSink(renderer) }
+  }
+
+  private fun resetCameraMedia(role: String) {
+    videoTracks.remove(role)?.let { oldTrack ->
+      registeredRenderers[role]?.forEach { renderer -> oldTrack.removeSink(renderer) }
+    }
+    attachedAudioTracks.removeIf { it.startsWith("${role}:") }
+    if (::frameHub.isInitialized) frameHub.clear(role)
   }
 
   private fun attachRenderer(role: String, renderer: SurfaceViewRenderer) {
