@@ -41,7 +41,7 @@ class ProductionController extends StateNotifier<ProductionState> {
         ? const NormalizedRect(x: .72, y: .68, width: .25, height: .25)
         : const NormalizedRect(x: 0, y: 0, width: 1, height: 1);
 
-    var scene = state.previewScene;
+    var scene = state.programScene;
     scene = _updateLayer(
       scene,
       'pastor-video',
@@ -53,63 +53,63 @@ class ProductionController extends StateNotifier<ProductionState> {
       (layer) => layer.copyWith(frame: crowdFrame, visible: crowd),
     );
 
-    state = state.copyWith(layout: layout, previewScene: scene);
+    state = state.copyWith(layout: layout, programScene: scene);
     _syncNativeScene();
   }
 
   void toggleLayer(LayerKind kind) {
-    final index = state.previewScene.layers.indexWhere((l) => l.kind == kind);
+    final index = state.programScene.layers.indexWhere((l) => l.kind == kind);
     if (index == -1) return;
-    final layer = state.previewScene.layers[index];
-    final next = [...state.previewScene.layers];
+    final layer = state.programScene.layers[index];
+    final next = [...state.programScene.layers];
     next[index] = layer.copyWith(visible: !layer.visible);
-    state = state.copyWith(previewScene: state.previewScene.copyWith(layers: next));
+    state = state.copyWith(previewScene: state.programScene.copyWith(layers: next));
   }
 
   void setLyricsText(String text) {
     final lyrics = state.lyrics.copyWith(text: text);
     final scene = _updateLayer(
-      state.previewScene,
+      state.programScene,
       'lyrics',
       (layer) => layer.copyWith(payload: {'text': text, 'size': lyrics.fontSize}),
     );
-    state = state.copyWith(lyrics: lyrics, previewScene: scene);
+    state = state.copyWith(lyrics: lyrics, programScene: scene);
     _syncNativeScene();
   }
 
   void setScriptureText(String text) {
     final scripture = state.scripture.copyWith(text: text);
     final scene = _updateLayer(
-      state.previewScene,
+      state.programScene,
       'scripture',
       (layer) => layer.copyWith(
         payload: {'text': text, 'reference': scripture.reference},
       ),
     );
-    state = state.copyWith(scripture: scripture, previewScene: scene);
+    state = state.copyWith(scripture: scripture, programScene: scene);
   }
 
   void setTickerText(String text) {
     final ticker = state.ticker.copyWith(text: text);
     final scene = _updateLayer(
-      state.previewScene,
+      state.programScene,
       'ticker',
       (layer) => layer.copyWith(payload: {'text': text}),
     );
-    state = state.copyWith(ticker: ticker, previewScene: scene);
+    state = state.copyWith(ticker: ticker, programScene: scene);
     _syncNativeScene();
   }
 
   void setLowerThird({String? name, String? title}) {
     final lower = state.lowerThird.copyWith(name: name, title: title);
     final scene = _updateLayer(
-      state.previewScene,
+      state.programScene,
       'lower-third',
       (layer) => layer.copyWith(
         payload: {'name': lower.name, 'title': lower.title},
       ),
     );
-    state = state.copyWith(lowerThird: lower, previewScene: scene);
+    state = state.copyWith(lowerThird: lower, programScene: scene);
   }
 
   void _syncNativeScene() {
@@ -147,30 +147,17 @@ class ProductionController extends StateNotifier<ProductionState> {
   }
 
   void updateTicker() {
-    final tickerLayer = state.previewScene.layers
-        .firstWhere((layer) => layer.id == 'ticker');
     final program = _updateLayer(
       state.programScene,
       'ticker',
       (layer) => layer.copyWith(
-        visible: tickerLayer.visible,
-        payload: Map<String, dynamic>.from(tickerLayer.payload),
+        visible: true,
+        payload: {'text': state.ticker.text},
       ),
     );
-    final preview = _updateLayer(
-      state.previewScene,
-      'ticker',
-      (layer) => layer.copyWith(visible: true),
-    );
-    state = state.copyWith(programScene: program, previewScene: preview);
+    state = state.copyWith(programScene: program);
+    _syncNativeScene();
   }
-
-  void take() => state = state.copyWith(
-        programScene: state.previewScene.copyWith(
-          id: 'program',
-          name: 'Program',
-        ),
-      );
 
   void toggleLive() => state = state.copyWith(
         liveStatus: state.liveStatus == 'LIVE' ? 'STANDBY' : 'LIVE',
@@ -179,14 +166,14 @@ class ProductionController extends StateNotifier<ProductionState> {
   void setCountdownSeconds(int seconds) {
     final countdown = state.countdown.copyWith(seconds: seconds);
     final scene = _updateLayer(
-      state.previewScene,
+      state.programScene,
       'countdown',
       (layer) => layer.copyWith(
         visible: true,
         payload: {'seconds': seconds},
       ),
     );
-    state = state.copyWith(countdown: countdown, previewScene: scene);
+    state = state.copyWith(countdown: countdown, programScene: scene);
   }
 
   void toggleCountdownMode() {
@@ -198,7 +185,7 @@ class ProductionController extends StateNotifier<ProductionState> {
 
   void movePip({double dx = 0, double dy = 0, double scale = 1}) {
     final scene = _updateLayer(
-      state.previewScene,
+      state.programScene,
       'crowd-video',
       (layer) => layer.copyWith(
         frame: layer.frame.copyWith(
@@ -209,6 +196,6 @@ class ProductionController extends StateNotifier<ProductionState> {
         ),
       ),
     );
-    state = state.copyWith(previewScene: scene);
+    state = state.copyWith(programScene: scene);
   }
 }
