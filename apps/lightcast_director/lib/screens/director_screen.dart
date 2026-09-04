@@ -120,6 +120,7 @@ class _DirectorScreenContent extends StatelessWidget {
                                         scene: state.previewScene,
                                         lyricsText: state.lyrics.text,
                                         tickerText: state.ticker.text,
+                                        tickerSpeed: state.ticker.speed,
                                         isProgram: false,
                                       ),
                                     ),
@@ -138,6 +139,7 @@ class _DirectorScreenContent extends StatelessWidget {
                                         scene: state.programScene,
                                         lyricsText: state.lyrics.text,
                                         tickerText: state.ticker.text,
+                                        tickerSpeed: state.ticker.speed,
                                         isProgram: true,
                                       ),
                                     ),
@@ -375,6 +377,7 @@ class _LargeBroadcastScreen extends StatefulWidget {
     required this.scene,
     required this.lyricsText,
     required this.tickerText,
+    required this.tickerSpeed,
     required this.isProgram,
   });
 
@@ -382,6 +385,7 @@ class _LargeBroadcastScreen extends StatefulWidget {
   final Scene? scene;
   final String lyricsText;
   final String tickerText;
+  final int tickerSpeed;
   final bool isProgram;
 
   @override
@@ -397,10 +401,21 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
   void initState() {
     super.initState();
     _tickerController = AnimationController(
-      duration: const Duration(seconds: 20),
+      duration: _tickerDuration(widget.tickerSpeed),
       vsync: this,
     )..repeat();
     _tickerAnimation = Tween<double>(begin: 1.0, end: -1.0).animate(_tickerController);
+  }
+
+  Duration _tickerDuration(int speed) =>
+      Duration(milliseconds: (960000 / speed.clamp(10, 100)).round());
+
+  @override
+  void didUpdateWidget(covariant _LargeBroadcastScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tickerSpeed != widget.tickerSpeed) {
+      _tickerController.duration = _tickerDuration(widget.tickerSpeed);
+    }
   }
 
   @override
