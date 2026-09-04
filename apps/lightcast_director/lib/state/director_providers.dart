@@ -63,7 +63,8 @@ class ProductionController extends StateNotifier<ProductionState> {
     final layer = state.programScene.layers[index];
     final next = [...state.programScene.layers];
     next[index] = layer.copyWith(visible: !layer.visible);
-    state = state.copyWith(previewScene: state.programScene.copyWith(layers: next));
+    state = state.copyWith(programScene: state.programScene.copyWith(layers: next));
+    _syncNativeScene();
   }
 
   void setLyricsText(String text) {
@@ -77,9 +78,12 @@ class ProductionController extends StateNotifier<ProductionState> {
     _syncNativeScene();
   }
 
-  void setScriptureReference(String reference) => state = state.copyWith(
-        scripture: state.scripture.copyWith(reference: reference),
-      );
+  void setScriptureReference(String reference) {
+    state = state.copyWith(
+      scripture: state.scripture.copyWith(reference: reference),
+    );
+    _syncNativeScene();
+  }
 
   void setScriptureText(String text) {
     final scripture = state.scripture.copyWith(text: text);
@@ -91,6 +95,7 @@ class ProductionController extends StateNotifier<ProductionState> {
       ),
     );
     state = state.copyWith(scripture: scripture, programScene: scene);
+    _syncNativeScene();
   }
 
   void setTickerText(String text) {
@@ -116,11 +121,20 @@ class ProductionController extends StateNotifier<ProductionState> {
     state = state.copyWith(lowerThird: lower, programScene: scene);
   }
 
+  bool _isProgramLayerVisible(LayerKind kind) => state.programScene.layers
+      .firstWhere((layer) => layer.kind == kind)
+      .visible;
+
   void _syncNativeScene() {
     if (state.liveStatus != 'LIVE') return;
     unawaited(NativeStreamingService.updateScene(
       lyrics: state.lyrics.text,
+      scripture: state.scripture.text,
+      scriptureReference: state.scripture.reference,
       ticker: state.ticker.text,
+      showLyrics: _isProgramLayerVisible(LayerKind.lyrics),
+      showScripture: _isProgramLayerVisible(LayerKind.scripture),
+      showTicker: _isProgramLayerVisible(LayerKind.ticker),
       layout: state.layout.name,
     ));
   }
