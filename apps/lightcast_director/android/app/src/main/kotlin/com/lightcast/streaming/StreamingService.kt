@@ -266,10 +266,11 @@ class StreamingService : Service() {
       noiseSuppressor = false
     )
 
-    compositor = OpenGLCompositor(frameHub, lyrics, ticker).also {
+    val activeCompositor = OpenGLCompositor(frameHub, lyrics, ticker).also {
       it.updateScene(lyrics, ticker, overlayLogo)
     }
-    output.getGlInterface().setFilter(compositor)
+    compositor = activeCompositor
+    output.getGlInterface().setFilter(activeCompositor)
     output.startStream(endpoint)
     publisher = output
   }
