@@ -37,9 +37,19 @@ class MainActivity: FlutterActivity() {
             "handleOffer" -> {
                 val role = call.argument<String>("role") ?: "pastor"
                 val sdp = call.argument<String>("sdp") ?: ""
-                StreamingService.requestOffer(this, role, sdp) { answer ->
-                    runOnUiThread { result.success(answer) }
-                }
+                StreamingService.requestOffer(
+                    this,
+                    role,
+                    sdp,
+                    callback = { answer ->
+                        runOnUiThread { result.success(answer) }
+                    },
+                    onError = { error ->
+                        runOnUiThread {
+                            result.error("WEBRTC_OFFER_FAILED", error, null)
+                        }
+                    }
+                )
             }
             "addIceCandidate" -> {
                 StreamingService.addIceCandidate(
