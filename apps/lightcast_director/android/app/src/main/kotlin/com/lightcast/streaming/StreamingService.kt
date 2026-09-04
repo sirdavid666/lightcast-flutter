@@ -269,7 +269,7 @@ class StreamingService : Service() {
     compositor = OpenGLCompositor(frameHub, lyrics, ticker).also {
       it.updateScene(lyrics, ticker, overlayLogo)
     }
-    output.glInterface.setFilter(0, compositor)
+    output.getGlInterface().setFilter(compositor)
     output.startStream(endpoint)
     publisher = output
   }
