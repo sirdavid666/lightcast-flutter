@@ -118,6 +118,25 @@ class CameraSource {
   final String transport;
   final int batteryPercent;
   final int signalPercent;
+
+  CameraSource copyWith({
+    String? id,
+    String? label,
+    String? role,
+    String? status,
+    String? transport,
+    int? batteryPercent,
+    int? signalPercent,
+  }) =>
+      CameraSource(
+        id: id ?? this.id,
+        label: label ?? this.label,
+        role: role ?? this.role,
+        status: status ?? this.status,
+        transport: transport ?? this.transport,
+        batteryPercent: batteryPercent ?? this.batteryPercent,
+        signalPercent: signalPercent ?? this.signalPercent,
+      );
 }
 
 class LyricsDraft {
