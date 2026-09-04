@@ -119,6 +119,7 @@ class ProductionController extends StateNotifier<ProductionState> {
       ),
     );
     state = state.copyWith(lowerThird: lower, programScene: scene);
+    _syncNativeScene();
   }
 
   bool _isProgramLayerVisible(LayerKind kind) => state.programScene.layers
@@ -131,8 +132,11 @@ class ProductionController extends StateNotifier<ProductionState> {
       lyrics: state.lyrics.text,
       scripture: state.scripture.text,
       scriptureReference: state.scripture.reference,
+      lowerThirdName: state.lowerThird.name,
+      lowerThirdTitle: state.lowerThird.title,
       ticker: state.ticker.text,
       showLyrics: _isProgramLayerVisible(LayerKind.lyrics),
+      showLowerThird: _isProgramLayerVisible(LayerKind.lowerThird),
       showScripture: _isProgramLayerVisible(LayerKind.scripture),
       showTicker: _isProgramLayerVisible(LayerKind.ticker),
       layout: state.layout.name,
