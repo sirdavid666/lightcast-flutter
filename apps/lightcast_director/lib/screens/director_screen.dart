@@ -109,43 +109,18 @@ class _DirectorScreenContent extends StatelessWidget {
                       child: Column(
                         children: [
                           Expanded(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Center(
-                                    child: AspectRatio(
-                                      aspectRatio: 16 / 9,
-                                      child: _LargeBroadcastScreen(
-                                        title: 'PREVIEW',
-                                        scene: state.previewScene,
-                                        lyricsText: state.lyrics.text,
-                                        tickerText: state.ticker.text,
-                                        tickerSpeed: state.ticker.speed,
-                                        isProgram: false,
-                                      ),
-                                    ),
-                                  ),
+                            child: Center(
+                              child: AspectRatio(
+                                aspectRatio: 16 / 9,
+                                child: _LargeBroadcastScreen(
+                                  title: 'PROGRAM',
+                                  scene: state.programScene,
+                                  lyricsText: state.lyrics.text,
+                                  tickerText: state.ticker.text,
+                                  tickerSpeed: state.ticker.speed,
+                                  isProgram: true,
                                 ),
-                                SizedBox(
-                                  width: 90,
-                                  child: _TakeColumn(onTake: controller.take),
-                                ),
-                                Expanded(
-                                  child: Center(
-                                    child: AspectRatio(
-                                      aspectRatio: 16 / 9,
-                                      child: _LargeBroadcastScreen(
-                                        title: 'PROGRAM',
-                                        scene: state.programScene,
-                                        lyricsText: state.lyrics.text,
-                                        tickerText: state.ticker.text,
-                                        tickerSpeed: state.ticker.speed,
-                                        isProgram: true,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                           _StatsBar(),
@@ -246,45 +221,6 @@ class _TopIpBarState extends State<_TopIpBar> {
           ],
         ),
       );
-}
-
-class _TakeColumn extends StatelessWidget {
-  const _TakeColumn({required this.onTake});
-
-  final VoidCallback onTake;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 7),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.arrow_forward, color: Colors.white30, size: 22),
-          const SizedBox(height: 6),
-          SizedBox(
-            height: 56,
-            width: double.infinity,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: lightcastBlue,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: onTake,
-              child: const FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  'TAKE',
-                  style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.1, fontSize: 15),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _StatsBar extends StatelessWidget {
