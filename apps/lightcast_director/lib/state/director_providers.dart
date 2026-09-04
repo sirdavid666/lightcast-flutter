@@ -125,6 +125,23 @@ class ProductionController extends StateNotifier<ProductionState> {
 
   void setStreamKey(String key) => state = state.copyWith(streamKey: key);
 
+  void setCameraStatus(String role, bool connected) {
+    final id = role == 'pastor' ? 'pastor' : 'crowd';
+    final sources = state.sources.map((source) {
+      if (source.id != id) return source;
+      return CameraSource(
+        id: source.id,
+        label: source.label,
+        role: source.role,
+        status: connected ? 'connected' : 'offline',
+        transport: connected ? 'webrtc' : 'mock',
+        batteryPercent: connected ? 84 : -1,
+        signalPercent: connected ? 92 : -1,
+      );
+    }).toList();
+    state = state.copyWith(sources: sources);
+  }
+
   void updateTicker() {
     final tickerLayer = state.previewScene.layers
         .firstWhere((layer) => layer.id == 'ticker');
