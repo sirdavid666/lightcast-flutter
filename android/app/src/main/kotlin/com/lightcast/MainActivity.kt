@@ -1,8 +1,7 @@
-package com.lightcast.director
+package com.lightcast
 
 import android.content.pm.ActivityInfo
 import android.os.Bundle
-import androidx.core.content.ContextCompat
 import com.lightcast.streaming.StreamingService
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -21,7 +20,7 @@ class MainActivity: FlutterActivity() {
         super.onCreate(savedInstanceState)
         
         // Force landscape orientation
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         
         // Initialize streaming service
         streamingService = StreamingService(this)
