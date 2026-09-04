@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lightcast_shared/lightcast_shared.dart';
 import '../app/theme.dart';
@@ -333,6 +334,41 @@ class _StatItem extends StatelessWidget {
   }
 }
 
+class NativeCameraView extends StatelessWidget {
+  const NativeCameraView({required this.role, super.key});
+
+  final String role;
+
+  @override
+  Widget build(BuildContext context) => AndroidView(
+        viewType: 'lightcast_camera_view',
+        creationParams: {'role': role},
+        creationParamsCodec: const StandardMessageCodec(),
+      );
+}
+
+class _LiveCameraLayer extends StatelessWidget {
+  const _LiveCameraLayer({required this.role, required this.frame});
+
+  final String role;
+  final NormalizedRect frame;
+
+  @override
+  Widget build(BuildContext context) => Positioned(
+        left: frame.x,
+        top: frame.y,
+        width: frame.width,
+        height: frame.height,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: ColoredBox(
+            color: Colors.black,
+            child: NativeCameraView(role: role),
+          ),
+        ),
+      );
+}
+
 class _LargeBroadcastScreen extends StatefulWidget {
   const _LargeBroadcastScreen({
     required this.title,
@@ -373,10 +409,30 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
     super.dispose();
   }
 
+  NormalizedRect _normalizedFrame(NormalizedRect frame, BoxConstraints box) =>
+      NormalizedRect(
+        x: frame.x * box.maxWidth,
+        y: frame.y * box.maxHeight,
+        width: frame.width * box.maxWidth,
+        height: frame.height * box.maxHeight,
+      );
+
+  SceneLayer? _layer(LayerKind kind) {
+    final scene = widget.scene;
+    if (scene == null) return null;
+    for (final layer in scene.layers) {
+      if (layer.kind == kind) return layer;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final borderColor = widget.isProgram ? Colors.red : Colors.blue;
     final hasScene = widget.scene != null;
+    final pastorLayer = _layer(LayerKind.pastorVideo);
+    final crowdLayer = _layer(LayerKind.crowdVideo);
+    final hasLiveLayer = (pastorLayer?.visible ?? false) || (crowdLayer?.visible ?? false);
     final lyrics = widget.lyricsText.trim();
     final tickerText = widget.tickerText.trim().isEmpty
         ? 'WELCOME TO SUNDAY SERVICE'
@@ -404,9 +460,15 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
           return Stack(
             fit: StackFit.expand,
             children: [
+              if (pastorLayer?.visible ?? false)
+                _LiveCameraLayer(role: 'pastor', frame: _normalizedFrame(pastorLayer!.frame, box)),
+              if (crowdLayer?.visible ?? false)
+                _LiveCameraLayer(role: 'crowd', frame: _normalizedFrame(crowdLayer!.frame, box)),
               Center(
-                child: hasScene
-                    ? Icon(Icons.videocam, size: 54 * scale, color: Colors.white.withOpacity(.1))
+                child: hasScene && hasLiveLayer
+                    ? const SizedBox.shrink()
+                    : hasScene
+                        ? Icon(Icons.videocam, size: 54 * scale, color: Colors.white.withOpacity(.1))
                     : Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
