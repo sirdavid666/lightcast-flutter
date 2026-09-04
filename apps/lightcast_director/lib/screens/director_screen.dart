@@ -102,39 +102,41 @@ class _DirectorScreenContent extends StatelessWidget {
                       child: Column(
                         children: [
                           Expanded(
-                            child: Center(
-                              child: AspectRatio(
-                                aspectRatio: 16 / 9,
-                                child: _LargeBroadcastScreen(
-                                  title: 'PREVIEW',
-                                  scene: state.previewScene,
-                                  lyricsText: state.lyrics.text,
-                                  tickerText: state.ticker.text,
-                                  isProgram: false,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Center(
+                                    child: AspectRatio(
+                                      aspectRatio: 16 / 9,
+                                      child: _LargeBroadcastScreen(
+                                        title: 'PREVIEW',
+                                        scene: state.previewScene,
+                                        lyricsText: state.lyrics.text,
+                                        tickerText: state.ticker.text,
+                                        isProgram: false,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: SizedBox(
-                              height: 48,
-                              width: double.infinity,
-                              child: _TakeButton(onTake: controller.take),
-                            ),
-                          ),
-                          Expanded(
-                            child: Center(
-                              child: AspectRatio(
-                                aspectRatio: 16 / 9,
-                                child: _LargeBroadcastScreen(
-                                  title: 'PROGRAM',
-                                  scene: state.programScene,
-                                  lyricsText: state.lyrics.text,
-                                  tickerText: state.ticker.text,
-                                  isProgram: true,
+                                SizedBox(
+                                  width: 90,
+                                  child: _TakeColumn(onTake: controller.take),
                                 ),
-                              ),
+                                Expanded(
+                                  child: Center(
+                                    child: AspectRatio(
+                                      aspectRatio: 16 / 9,
+                                      child: _LargeBroadcastScreen(
+                                        title: 'PROGRAM',
+                                        scene: state.programScene,
+                                        lyricsText: state.lyrics.text,
+                                        tickerText: state.ticker.text,
+                                        isProgram: true,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           _StatsBar(),
@@ -237,27 +239,38 @@ class _TopIpBarState extends State<_TopIpBar> {
       );
 }
 
-class _TakeButton extends StatelessWidget {
-  const _TakeButton({required this.onTake});
+class _TakeColumn extends StatelessWidget {
+  const _TakeColumn({required this.onTake});
 
   final VoidCallback onTake;
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton(
-      style: FilledButton.styleFrom(
-        backgroundColor: lightcastBlue,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-      onPressed: onTake,
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+      child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.arrow_forward, color: Colors.white70, size: 18),
-          SizedBox(width: 8),
-          Text(
-            'TAKE',
-            style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.1, fontSize: 15),
+        children: [
+          const Icon(Icons.arrow_forward, color: Colors.white30, size: 22),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 56,
+            width: double.infinity,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: lightcastBlue,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: onTake,
+              child: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'TAKE',
+                  style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.1, fontSize: 15),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -370,155 +383,173 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
         border: Border.all(color: borderColor, width: 2),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Center(
-            child: hasScene
-                ? Icon(Icons.videocam, size: 54, color: Colors.white.withOpacity(.1))
-                : const Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.videocam_off, size: 30, color: Colors.white38),
-                      SizedBox(height: 6),
-                      Text(
-                        'WAITING FOR CAMERA...',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white60,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: .8,
+      child: LayoutBuilder(
+        builder: (context, box) {
+          // Scale every overlay element off the actual rendered frame size
+          // (reference: a 320-wide 16:9 frame) so nothing ever collides,
+          // no matter how small or large the monitor renders.
+          final scale = (box.maxWidth / 320).clamp(0.45, 1.6);
+          final tickerHeight = 28 * scale;
+          final badgeFontSize = (10 * scale).clamp(7.0, 12.0);
+          final lyricsFontSize = (17 * scale).clamp(10.0, 19.0);
+          final tickerFontSize = (12 * scale).clamp(8.0, 13.0);
+          final waitingFontSize = (11 * scale).clamp(8.0, 12.0);
+
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Center(
+                child: hasScene
+                    ? Icon(Icons.videocam, size: 54 * scale, color: Colors.white.withOpacity(.1))
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.videocam_off, size: 30 * scale, color: Colors.white38),
+                          SizedBox(height: 6 * scale),
+                          Text(
+                            'WAITING FOR CAMERA...',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white60,
+                              fontSize: waitingFontSize,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: .8,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+              Positioned.fill(
+                child: Padding(
+                  padding: EdgeInsets.all(8 * scale),
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: FractionallySizedBox(
+                      widthFactor: .18,
+                      heightFactor: .22,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(5),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(.3), blurRadius: 5)],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(5),
+                          child: Image.asset(
+                            'assets/images/church_logo.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.church, color: Colors.blue, size: 22),
+                          ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-          ),
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: FractionallySizedBox(
-                  widthFactor: .18,
-                  heightFactor: .22,
+                ),
+              ),
+              if (hasScene && lyrics.isNotEmpty)
+                Positioned(
+                  left: 12 * scale,
+                  right: 12 * scale,
+                  bottom: tickerHeight + 6 * scale,
                   child: Container(
+                    constraints: BoxConstraints(maxHeight: 66 * scale),
+                    padding: EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 6 * scale),
                     decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(.7),
+                      borderRadius: BorderRadius.circular(7),
+                      border: Border.all(color: Colors.white.withOpacity(.2)),
+                    ),
+                    child: Text(
+                      lyrics,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: lyricsFontSize,
+                        fontWeight: FontWeight.bold,
+                        shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+                      ),
+                    ),
+                  ),
+                ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: SizedBox(
+                  height: tickerHeight,
+                  child: ColoredBox(
+                    color: Colors.blue,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) => ClipRect(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const NeverScrollableScrollPhysics(),
+                          child: AnimatedBuilder(
+                            animation: _tickerAnimation,
+                            builder: (context, child) => Transform.translate(
+                              offset: Offset(_tickerAnimation.value * constraints.maxWidth, 0),
+                              child: child,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(width: 14 * scale),
+                                Text(
+                                  tickerText,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: tickerFontSize,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(width: 28 * scale),
+                                Text(
+                                  '• NEWS •',
+                                  style: TextStyle(
+                                    color: Colors.yellow,
+                                    fontSize: tickerFontSize,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(width: 28 * scale),
+                                Text(
+                                  tickerText,
+                                  style: TextStyle(color: Colors.white, fontSize: tickerFontSize),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8 * scale,
+                right: 8 * scale,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 4 * scale),
+                  decoration: BoxDecoration(
+                    color: widget.isProgram ? Colors.red : Colors.blue,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    widget.title,
+                    style: TextStyle(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(5),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(.3), blurRadius: 5)],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(5),
-                      child: Image.asset(
-                        'assets/images/church_logo.png',
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.church, color: Colors.blue, size: 22),
-                      ),
+                      fontWeight: FontWeight.bold,
+                      fontSize: badgeFontSize,
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
-          if (hasScene && lyrics.isNotEmpty)
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: 37,
-              child: Container(
-                constraints: const BoxConstraints(maxHeight: 66),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(.7),
-                  borderRadius: BorderRadius.circular(7),
-                  border: Border.all(color: Colors.white.withOpacity(.2)),
-                ),
-                child: Text(
-                  lyrics,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    shadows: [Shadow(color: Colors.black, blurRadius: 4)],
-                  ),
-                ),
-              ),
-            ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SizedBox(
-              height: 28,
-              child: ColoredBox(
-                color: Colors.blue,
-                child: LayoutBuilder(
-                  builder: (context, constraints) => ClipRect(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const NeverScrollableScrollPhysics(),
-                      child: AnimatedBuilder(
-                        animation: _tickerAnimation,
-                        builder: (context, child) => Transform.translate(
-                          offset: Offset(_tickerAnimation.value * constraints.maxWidth, 0),
-                          child: child,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox(width: 14),
-                            Text(
-                              tickerText,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(width: 28),
-                            const Text(
-                              '• NEWS •',
-                              style: TextStyle(
-                                color: Colors.yellow,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(width: 28),
-                            Text(
-                              tickerText,
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: widget.isProgram ? Colors.red : Colors.blue,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                widget.title,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
-              ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
