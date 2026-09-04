@@ -149,7 +149,7 @@ class _DirectorScreenContent extends StatelessWidget {
 // NEW: Large Broadcast Screen with Logo, Ticker, and Lyrics
 class _LargeBroadcastScreen extends StatefulWidget {
   final String title;
-  final SceneState scene;
+  final dynamic scene;  // ✅ USE dynamic instead
   final bool isProgram;
   final VoidCallback onTake;
 
