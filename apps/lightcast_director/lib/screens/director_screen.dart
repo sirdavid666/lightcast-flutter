@@ -93,43 +93,56 @@ class _DirectorScreenContent extends StatelessWidget {
           children: [
             const _TopIpBar(),
             Expanded(
-              flex: 1,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 5),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _LargeBroadcastScreen(
-                        title: 'PREVIEW',
-                        scene: state.previewScene,
-                        lyricsText: state.lyrics.text,
-                        tickerText: state.ticker.text,
-                        isProgram: false,
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 8, 5, 8),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: _LargeBroadcastScreen(
+                              title: 'PREVIEW',
+                              scene: state.previewScene,
+                              lyricsText: state.lyrics.text,
+                              tickerText: state.ticker.text,
+                              isProgram: false,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: SizedBox(
+                              height: 48,
+                              width: double.infinity,
+                              child: _TakeButton(onTake: controller.take),
+                            ),
+                          ),
+                          Expanded(
+                            child: _LargeBroadcastScreen(
+                              title: 'PROGRAM',
+                              scene: state.programScene,
+                              lyricsText: state.lyrics.text,
+                              tickerText: state.ticker.text,
+                              isProgram: true,
+                            ),
+                          ),
+                          _StatsBar(),
+                        ],
                       ),
                     ),
-                    SizedBox(width: 90, child: _TakeColumn(onTake: controller.take)),
-                    Expanded(
-                      child: _LargeBroadcastScreen(
-                        title: 'PROGRAM',
-                        scene: state.programScene,
-                        lyricsText: state.lyrics.text,
-                        tickerText: state.ticker.text,
-                        isProgram: true,
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(5, 8, 10, 8),
+                      child: _Controls(
+                        onTab: (index) =>
+                            controller.setPanel(DirectorScreen.panelNames[index]),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            _StatsBar(),
-            Flexible(
-              flex: 1,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 2, 10, 8),
-                child: _Controls(
-                  onTab: (index) =>
-                      controller.setPanel(DirectorScreen.panelNames[index]),
-                ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -214,36 +227,27 @@ class _TopIpBarState extends State<_TopIpBar> {
       );
 }
 
-class _TakeColumn extends StatelessWidget {
-  const _TakeColumn({required this.onTake});
+class _TakeButton extends StatelessWidget {
+  const _TakeButton({required this.onTake});
 
   final VoidCallback onTake;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 7),
-      child: Column(
+    return FilledButton(
+      style: FilledButton.styleFrom(
+        backgroundColor: lightcastBlue,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      onPressed: onTake,
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.arrow_forward, color: Colors.white30, size: 22),
-          const SizedBox(height: 6),
-          Expanded(
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: lightcastBlue,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: onTake,
-              child: const FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  'TAKE',
-                  style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.1, fontSize: 15),
-                ),
-              ),
-            ),
+        children: const [
+          Icon(Icons.arrow_forward, color: Colors.white70, size: 18),
+          SizedBox(width: 8),
+          Text(
+            'TAKE',
+            style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.1, fontSize: 15),
           ),
         ],
       ),
@@ -445,39 +449,43 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
                 color: Colors.blue,
                 child: LayoutBuilder(
                   builder: (context, constraints) => ClipRect(
-                    child: AnimatedBuilder(
-                      animation: _tickerAnimation,
-                      builder: (context, child) => Transform.translate(
-                        offset: Offset(_tickerAnimation.value * constraints.maxWidth, 0),
-                        child: child,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const SizedBox(width: 14),
-                          Text(
-                            tickerText,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: AnimatedBuilder(
+                        animation: _tickerAnimation,
+                        builder: (context, child) => Transform.translate(
+                          offset: Offset(_tickerAnimation.value * constraints.maxWidth, 0),
+                          child: child,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(width: 14),
+                            Text(
+                              tickerText,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 28),
-                          const Text(
-                            '• NEWS •',
-                            style: TextStyle(
-                              color: Colors.yellow,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                            const SizedBox(width: 28),
+                            const Text(
+                              '• NEWS •',
+                              style: TextStyle(
+                                color: Colors.yellow,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 28),
-                          Text(
-                            tickerText,
-                            style: const TextStyle(color: Colors.white, fontSize: 12),
-                          ),
-                        ],
+                            const SizedBox(width: 28),
+                            Text(
+                              tickerText,
+                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
