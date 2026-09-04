@@ -77,6 +77,10 @@ class ProductionController extends StateNotifier<ProductionState> {
     _syncNativeScene();
   }
 
+  void setScriptureReference(String reference) => state = state.copyWith(
+        scripture: state.scripture.copyWith(reference: reference),
+      );
+
   void setScriptureText(String text) {
     final scripture = state.scripture.copyWith(text: text);
     final scene = _updateLayer(
