@@ -27,7 +27,8 @@ class LanCameraTransport {
     final Map<String, dynamic> mediaConstraints = {
       'audio': true,
       'video': {
-        'facingMode': role == 'pastor' ? 'user' : 'environment',
+        // FIX: Force BOTH pastor and crowd to use the back camera ('environment')
+        'facingMode': 'environment', 
         'width': {'ideal': 1280},
         'height': {'ideal': 720},
       },
