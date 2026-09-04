@@ -11,7 +11,9 @@ import '../widgets/control_panels.dart';
 final signalingServerProvider = Provider<SignalingServer>((ref) {
   final server = SignalingServer();
   unawaited(server.start());
-  ref.onDispose(() { unawaited(server.stop()); });
+  ref.onDispose(() {
+    unawaited(server.stop());
+  });
   return server;
 });
 
@@ -88,8 +90,9 @@ class _DirectorScreenContent extends StatelessWidget {
         ),
         body: Column(
           children: [
+            // FIX 1a: video area reduced flex 8 -> 6 (tabs move up)
             Expanded(
-              flex: 8,
+              flex: 6,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 5),
                 child: Row(
@@ -117,9 +120,10 @@ class _DirectorScreenContent extends StatelessWidget {
                 ),
               ),
             ),
-            _StatsBar(),
+            const _StatsBar(),
+            // FIX 1b: controls enlarged flex 2 -> 4 (panels get room + they already scroll via PanelShell/ListView)
             Flexible(
-              flex: 2,
+              flex: 4,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(10, 2, 10, 8),
                 child: _Controls(
@@ -356,17 +360,18 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
                 ),
               ),
             ),
+          // FIX 2: ticker fully clipped — yellow/black overflow stripe removed
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: SizedBox(
               height: 28,
-              child: ColoredBox(
-                color: Colors.blue,
-                child: LayoutBuilder(
-                  builder: (context, constraints) => ClipRect(
-                    child: AnimatedBuilder(
+              child: ClipRect(
+                child: ColoredBox(
+                  color: Colors.blue,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => AnimatedBuilder(
                       animation: _tickerAnimation,
                       builder: (context, child) => Transform.translate(
                         offset: Offset(_tickerAnimation.value * constraints.maxWidth, 0),
@@ -449,10 +454,9 @@ class _Controls extends StatelessWidget {
             labelPadding: const EdgeInsets.symmetric(horizontal: 11),
             labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
             onTap: onTab,
-            tabs: DirectorScreen.panelNames
-                .map((name) => Tab(text: name))
-                .toList(),
+            tabs: DirectorScreen.panelNames.map((name) => Tab(text: name)).toList(),
           ),
+          // Panels already scroll themselves (PanelShell = ListView). Do NOT wrap them.
           const Expanded(
             child: TabBarView(
               children: [
@@ -489,7 +493,7 @@ class _StatusPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(5),
       ),
       child: Text(
-        live ? '● ' + label : label,
+        live ? '● $label' : label,
         style: TextStyle(
           color: live ? const Color(0xFF4ADE80) : Colors.grey.shade400,
           fontWeight: FontWeight.w800,
