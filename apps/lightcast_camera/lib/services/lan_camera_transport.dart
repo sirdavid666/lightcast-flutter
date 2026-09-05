@@ -57,7 +57,7 @@ class LanCameraTransport {
           ? await discovery.discover()
           : configuredHost;
       if (_directorIp == null) {
-        throw const SocketException(
+        throw SocketException(
           'No LightCast Director found on the local network',
         );
       }
