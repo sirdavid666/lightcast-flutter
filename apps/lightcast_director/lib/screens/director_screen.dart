@@ -221,6 +221,38 @@ class _TopIpBarState extends State<_TopIpBar> {
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
             ),
+            IconButton(
+              icon: const Icon(Icons.qr_code, color: Colors.white70, size: 18),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: Colors.white,
+                    title: const Text('Scan to Connect Camera', textAlign: TextAlign.center),
+                    content: SizedBox(
+                      width: 250,
+                      height: 250,
+                      child: Center(
+                        child: QrImageView(
+                          data: _ip,
+                          version: QrVersions.auto,
+                          size: 250.0,
+                          backgroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ],
         ),
       );
