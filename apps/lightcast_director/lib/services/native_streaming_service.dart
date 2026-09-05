@@ -3,12 +3,32 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// Thin control plane for the native Android program output.
-///
-/// No Flutter widget, texture, or Flutter view is passed to RootEncoder.
-/// These calls only configure the native WebRTC -> compositor -> RTMPS graph.
 class NativeStreamingService {
   static const MethodChannel _channel = MethodChannel('com.lightcast/streaming');
+
+  static void Function(String role, Map<String, dynamic> candidate)? onLocalIceCandidate;
+
+  static bool _initialized = false;
+
+  static void init() {
+    if (_initialized) return;
+    _initialized = true;
+    _channel.setMethodCallHandler(_handleNativeCalls);
+  }
+
+  static Future<dynamic> _handleNativeCalls(MethodCall call) async {
+    switch (call.method) {
+      case 'onIceCandidate':
+        final args = Map<String, dynamic>.from(call.arguments as Map);
+        final role = args['role'] as String? ?? 'unknown';
+        debugPrint('Native -> Dart ICE candidate for $role');
+        onLocalIceCandidate?.call(role, args);
+        return null;
+      default:
+        debugPrint('Unhandled native call: ${call.method}');
+        return null;
+    }
+  }
 
   static Future<String?> handleOffer({
     required String role,
@@ -131,7 +151,6 @@ class NativeStreamingService {
   }
 }
 
-/// Backwards-compatible name used by the director controls.
 class StreamingService {
   static Future<String?> handleOffer(String sdp, {String role = 'pastor'}) =>
       NativeStreamingService.handleOffer(role: role, sdp: sdp);
