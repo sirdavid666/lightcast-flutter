@@ -236,7 +236,7 @@ class OpenGLCompositor(
   }
 
   override fun drawFilter() {
-    if (showTicker) overlayDirty = true
+    if (showTicker || showLyrics) overlayDirty = true
     val pastor = frameHub.latestFrame("pastor")
     val crowd = frameHub.latestFrame("crowd")
     if (pastor !== uploadedPastor) {
@@ -388,59 +388,69 @@ class OpenGLCompositor(
 
     if (showScripture && scriptureText.isNotBlank()) {
       paint.color = Color.argb(215, 0, 0, 0)
-      canvas.drawRoundRect(RectF(90f, 40f, 1190f, 185f), 18f, 18f, paint)
+      canvas.drawRoundRect(RectF(60f, 36f, 1220f, 265f), 18f, 18f, paint)
       paint.color = Color.WHITE
       paint.textAlign = Paint.Align.CENTER
-      drawFittedText(
-        canvas,
-        paint,
-        scriptureText,
-        OUTPUT_WIDTH / 2f,
-        112f,
-        maxWidth = 1020f,
-        maxTextSize = 34f,
-        minTextSize = 12f
+      val bottom = drawWrappedText(
+        canvas, paint, scriptureText,
+        OUTPUT_WIDTH / 2f, 60f, maxWidth = 1080f, textSize = 44f, maxLines = 3
       )
       if (scriptureReference.isNotBlank()) {
         paint.color = Color.argb(225, 220, 230, 220)
-        drawFittedText(
-          canvas,
-          paint,
-          scriptureReference,
-          OUTPUT_WIDTH / 2f,
-          155f,
-          maxWidth = 1020f,
-          maxTextSize = 22f,
-          minTextSize = 10f
-        )
+        paint.textSize = 30f
+        canvas.drawText(scriptureReference, OUTPUT_WIDTH / 2f, bottom + 8f, paint)
       }
     }
 
     if (showLowerThird && (lowerThirdName.isNotBlank() || lowerThirdTitle.isNotBlank())) {
       paint.color = Color.argb(220, 0, 0, 0)
-      canvas.drawRoundRect(RectF(42f, 430f, 600f, 515f), 10f, 10f, paint)
+      canvas.drawRoundRect(RectF(42f, 430f, 640f, 525f), 10f, 10f, paint)
       paint.color = Color.rgb(105, 220, 125)
-      canvas.drawRect(42f, 430f, 54f, 515f, paint)
+      canvas.drawRect(42f, 430f, 56f, 525f, paint)
       paint.color = Color.WHITE
       paint.textAlign = Paint.Align.LEFT
       if (lowerThirdName.isNotBlank()) {
-        paint.textSize = 30f
-        canvas.drawText(lowerThirdName.take(42), 78f, 470f, paint)
+        paint.textSize = 34f
+        canvas.drawText(lowerThirdName.take(42), 80f, 474f, paint)
       }
       if (lowerThirdTitle.isNotBlank()) {
         paint.color = Color.argb(225, 220, 230, 220)
-        paint.textSize = 20f
-        canvas.drawText(lowerThirdTitle.take(58), 78f, 500f, paint)
+        paint.textSize = 24f
+        canvas.drawText(lowerThirdTitle.take(58), 80f, 508f, paint)
       }
     }
 
     if (showLyrics && lyricsText.isNotBlank()) {
-      paint.color = Color.argb(235, 35, 145, 58)
-      canvas.drawRect(0f, 525f, OUTPUT_WIDTH.toFloat(), 625f, paint)
+      val regionTop = 280f
+      val regionBottom = 645f
+      paint.color = Color.argb(150, 0, 0, 0)
+      canvas.drawRect(0f, regionTop, OUTPUT_WIDTH.toFloat(), regionBottom, paint)
+
+      val lines = lyricsText.split('\n')
+      val textSize = 40f
+      val lineHeight = textSize * 1.55f
+      paint.textSize = textSize
       paint.color = Color.WHITE
-      paint.textSize = 44f
       paint.textAlign = Paint.Align.CENTER
-      canvas.drawText(lyricsText.take(72), OUTPUT_WIDTH / 2f, 588f, paint)
+
+      val totalHeight = lines.size * lineHeight + 240f
+      val regionHeight = regionBottom - regionTop
+      val seconds = System.nanoTime() / 1_000_000_000.0
+      val speed = 26f
+      val cycle = totalHeight + regionHeight
+      var y = regionTop - totalHeight + ((seconds * speed) % cycle).toFloat()
+
+      canvas.save()
+      canvas.clipRect(0f, regionTop, OUTPUT_WIDTH.toFloat(), regionBottom)
+      for (line in lines) {
+        if (line.isBlank()) {
+          y += lineHeight * 0.9f
+          continue
+        }
+        canvas.drawText(line.take(64), OUTPUT_WIDTH / 2f, y, paint)
+        y += lineHeight
+      }
+      canvas.restore()
     }
 
     if (showTicker) {
@@ -489,26 +499,39 @@ class OpenGLCompositor(
     overlayDirty = false
   }
 
-  private fun drawFittedText(
+  private fun drawWrappedText(
     canvas: Canvas,
     paint: Paint,
     text: String,
-    x: Float,
-    baseline: Float,
+    centerX: Float,
+    top: Float,
     maxWidth: Float,
-    maxTextSize: Float,
-    minTextSize: Float
-  ) {
-    var value = text.trim()
-    var textSize = maxTextSize
+    textSize: Float,
+    maxLines: Int
+  ): Float {
     paint.textSize = textSize
-    while (textSize > minTextSize && paint.measureText(value) > maxWidth) {
-      textSize -= 1f
-      paint.textSize = textSize
+    val words = text.trim().split(Regex("\\s+"))
+    val lines = mutableListOf<String>()
+    var current = StringBuilder()
+    for (word in words) {
+      val test = if (current.isEmpty()) word else "$current $word"
+      if (paint.measureText(test) <= maxWidth || current.isEmpty()) {
+        current = StringBuilder(test)
+      } else {
+        lines.add(current.toString())
+        current = StringBuilder(word)
+      }
     }
-    while (value.isNotEmpty() && paint.measureText(value) > maxWidth) {
-      value = value.dropLast(1).trimEnd() + "…"
+    if (current.isNotEmpty()) lines.add(current.toString())
+
+    var y = top + textSize
+    val lineHeight = textSize * 1.35f
+    val drawn = lines.take(maxLines)
+    for ((index, line) in drawn.withIndex()) {
+      val suffix = if (index == maxLines - 1 && lines.size > maxLines) " …" else ""
+      canvas.drawText(line + suffix, centerX, y, paint)
+      y += lineHeight
     }
-    canvas.drawText(value, x, baseline, paint)
+    return y
   }
 }
