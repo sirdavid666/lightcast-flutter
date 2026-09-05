@@ -1,10 +1,9 @@
-// This file contains interactive role cards and runtime status widgets.
-// They cannot all be const because their callbacks and values are dynamic.
 // ignore_for_file: prefer_const_constructors
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../state/camera_providers.dart';
 import '../services/lan_camera_transport.dart';
 
@@ -36,7 +35,7 @@ class CameraRoleScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Choose this phone’s camera role',
+                    'Choose this phone\'s camera role',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey.shade400),
                   ),
@@ -123,6 +122,7 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
   late final TextEditingController _directorIpController;
   String? _cameraError;
   bool _isConnecting = false;
+  String _stageLabel = '';
 
   @override
   void initState() {
@@ -136,10 +136,15 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
     setState(() {
       _isConnecting = true;
       _cameraError = null;
+      _stageLabel = 'Starting...';
     });
     final role = ref.read(cameraProvider).role == CameraRole.pastor ? 'pastor' : 'crowd';
     final transport = LanCameraTransport(
       role: role,
+      onStageChanged: (stage) {
+        if (!mounted) return;
+        setState(() => _stageLabel = stage);
+      },
       onStateChanged: (status, error) {
         if (!mounted) return;
         setState(() {
@@ -153,6 +158,7 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
           } else if (status == CameraTransportStatus.disconnected) {
             _isConnecting = false;
             _transport = null;
+            _stageLabel = '';
           }
         });
         ref.read(cameraProvider.notifier).setConnected(
@@ -184,8 +190,40 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
     if (mounted) setState(() {
       _transport = null;
       _isConnecting = false;
+      _stageLabel = '';
     });
     ref.read(cameraProvider.notifier).setConnected(false);
+  }
+
+  Future<void> _scanQrCode() async {
+    final scannedIp = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Scan Director QR')),
+          body: MobileScanner(
+            onDetect: (capture) {
+              final barcodes = capture.barcodes;
+              for (final barcode in barcodes) {
+                final value = barcode.rawValue;
+                if (value != null && value.contains(RegExp(r'^\d{1,3}(\.\d{1,3}){3}$'))) {
+                  Navigator.of(context).pop(value);
+                  return;
+                }
+              }
+            },
+          ),
+        ),
+      ),
+    );
+
+    if (scannedIp != null && scannedIp.isNotEmpty) {
+      await _connectWithScannedIp(scannedIp);
+    }
+  }
+
+  Future<void> _connectWithScannedIp(String ip) async {
+    _directorIpController.text = ip;
+    await _connectToDirector();
   }
 
   @override
@@ -204,6 +242,7 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
         setState(() {
           _transport = null;
           _isConnecting = false;
+          _stageLabel = '';
         });
         ref.read(cameraProvider.notifier).setConnected(false);
       }
@@ -262,10 +301,17 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
                       Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
-                          child: Text(
-                            _cameraError!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.redAccent, size: 32),
+                              const SizedBox(height: 10),
+                              Text(
+                                _cameraError!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -280,11 +326,12 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
                     Positioned(
                       bottom: 18,
                       left: 18,
+                      right: 18,
                       child: Text(
                         _transport?.localRenderer.srcObject != null
                             ? 'REAL CAMERA • WEBRTC'
                             : _isConnecting
-                                ? 'CONNECTING TO DIRECTOR...'
+                                ? (_stageLabel.isEmpty ? 'CONNECTING TO DIRECTOR...' : _stageLabel.toUpperCase())
                                 : 'NOT CONNECTED',
                         style: TextStyle(
                           color: Colors.white.withOpacity(.75),
@@ -314,15 +361,27 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
                     style: TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                    const SizedBox(height: 10),
-                   TextField(
-                     controller: _directorIpController,
-                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                     textInputAction: TextInputAction.done,
-                     decoration: const InputDecoration(
-                       labelText: 'Manual Director IP (optional)',
-                       hintText: 'Use only if auto-discovery cannot find it',
-                       prefixIcon: Icon(Icons.router_outlined),
-                     ),
+                   Row(
+                     children: [
+                       Expanded(
+                         child: TextField(
+                           controller: _directorIpController,
+                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                           textInputAction: TextInputAction.done,
+                           decoration: const InputDecoration(
+                             labelText: 'Manual Director IP (optional)',
+                             hintText: 'Use only if auto-discovery cannot find it',
+                             prefixIcon: Icon(Icons.router_outlined),
+                           ),
+                         ),
+                       ),
+                       const SizedBox(width: 8),
+                       IconButton.filledTonal(
+                         tooltip: 'Scan Director QR code',
+                         icon: const Icon(Icons.qr_code_scanner),
+                         onPressed: _isConnecting ? null : _scanQrCode,
+                       ),
+                     ],
                    ),
                   const SizedBox(height: 18),
                   SizedBox(
@@ -335,7 +394,7 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
                       icon: Icon(state.connected ? Icons.stop : Icons.link),
                       label: Text(
                          _isConnecting
-                             ? 'CONNECTING...'
+                             ? (_stageLabel.isEmpty ? 'CONNECTING...' : _stageLabel.toUpperCase())
                              : state.connected
                                  ? 'STOP SENDING FEED'
                              : 'FIND & CONNECT TO DIRECTOR',
