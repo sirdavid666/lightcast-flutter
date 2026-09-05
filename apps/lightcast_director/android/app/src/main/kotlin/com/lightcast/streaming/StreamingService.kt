@@ -75,6 +75,7 @@ class StreamingService : Service() {
     private var service: StreamingService? = null
     private val answerCallbacks = ConcurrentHashMap<String, (String) -> Unit>()
     private val errorCallbacks = ConcurrentHashMap<String, (String) -> Unit>()
+    private val answersSent = ConcurrentHashMap.newKeySet<String>()
     private val registeredRenderers = ConcurrentHashMap<String, CopyOnWriteArraySet<SurfaceViewRenderer>>()
 
     // 🔥 ADDED: Callback for sending ICE candidates back to Flutter/Dart
@@ -315,6 +316,7 @@ class StreamingService : Service() {
     remoteDescriptions.clear()
     answerCallbacks.clear()
     errorCallbacks.clear()
+    answersSent.clear()
     if (::peerFactory.isInitialized) peerFactory.dispose()
     if (::eglBase.isInitialized) eglBase.release()
     service = null
@@ -470,6 +472,7 @@ class StreamingService : Service() {
     resetCameraMedia(role)
     remoteDescriptions.remove(role)
     pendingCandidates.remove(role)
+    answersSent.remove(role)
     peers.remove(role)?.dispose()
 
     val configuration = PeerConnection.RTCConfiguration(
@@ -535,18 +538,27 @@ class StreamingService : Service() {
     )
   }
 
-  private fun waitForIceAndAnswer(role: String) {
+  private fun waitForIceAndAnswer(role: String, attempts: Int = 0) {
     val peer = peers[role] ?: return
     if (peer.iceGatheringState() == PeerConnection.IceGatheringState.COMPLETE) {
       sendAnswer(role)
+    } else if (attempts >= 40) {
+      // Do not wait forever on a network whose TURN server is unreachable.
+      // The native peer can still trickle any candidates it has produced.
+      sendAnswer(role)
     } else {
-      Handler(Looper.getMainLooper()).postDelayed({ sendAnswer(role) }, 1_500L)
+      Handler(Looper.getMainLooper()).postDelayed(
+        { waitForIceAndAnswer(role, attempts + 1) },
+        250L
+      )
     }
   }
 
   private fun sendAnswer(role: String) {
+    if (!answersSent.add(role)) return
     val answer = peers[role]?.localDescription?.description
     if (answer.isNullOrBlank()) {
+      answersSent.remove(role)
       fail(role, "Native peer produced no SDP answer")
       return
     }

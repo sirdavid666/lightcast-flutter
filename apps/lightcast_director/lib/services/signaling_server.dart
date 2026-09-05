@@ -20,6 +20,7 @@ typedef CameraIceDiagnosticsCallback = void Function(
 class SignalingServer {
   HttpServer? _server;
   final Map<String, WebSocketChannel> _channels = {};
+  final Map<String, List<Map<String, dynamic>>> _pendingLocalCandidates = {};
   final CameraStatusCallback? onCameraStatusChanged;
   final CameraIceDiagnosticsCallback? onIceDiagnostics;
 
@@ -42,6 +43,7 @@ class SignalingServer {
           : 'unknown';
       _channels[role]?.sink.close();
       _channels[role] = webSocket;
+      _flushPendingLocalCandidates(role, webSocket);
       onCameraStatusChanged?.call(role, true);
       debugPrint('[SignalingServer] camera connected: $role');
 
@@ -52,6 +54,7 @@ class SignalingServer {
       }, onDone: () {
         if (identical(_channels[role], webSocket)) {
           _channels.remove(role);
+          _pendingLocalCandidates.remove(role);
           onCameraStatusChanged?.call(role, false);
         }
         debugPrint('[SignalingServer] camera disconnected: $role');
@@ -79,9 +82,31 @@ class SignalingServer {
   void _sendCandidateToCamera(String role, Map<String, dynamic> candidate) {
     final channel = _channels[role];
     if (channel == null) {
-      debugPrint('[SignalingServer] no channel for $role, dropping local candidate');
+      _pendingLocalCandidates
+          .putIfAbsent(role, () => <Map<String, dynamic>>[])
+          .add(Map<String, dynamic>.from(candidate));
+      debugPrint('[SignalingServer] queueing local candidate until camera connects: $role');
       return;
     }
+    _sendCandidate(channel, role, candidate);
+  }
+
+  void _flushPendingLocalCandidates(
+    String role,
+    WebSocketChannel channel,
+  ) {
+    final pending = _pendingLocalCandidates.remove(role);
+    if (pending == null) return;
+    for (final candidate in pending) {
+      _sendCandidate(channel, role, candidate);
+    }
+  }
+
+  void _sendCandidate(
+    WebSocketChannel channel,
+    String role,
+    Map<String, dynamic> candidate,
+  ) {
     channel.sink.add(jsonEncode({
       'type': 'candidate',
       'candidate': {
@@ -143,6 +168,7 @@ class SignalingServer {
       await channel.sink.close();
     }
     _channels.clear();
+    _pendingLocalCandidates.clear();
     await _server?.close();
     _server = null;
   }

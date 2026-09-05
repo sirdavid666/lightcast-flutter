@@ -34,6 +34,9 @@ class NativeStreamingService {
     required String role,
     required String sdp,
   }) async {
+    // Keep this defensive call here as well as in SignalingServer.start().
+    // It guarantees native -> Dart ICE delivery for every offer entry point.
+    init();
     try {
       return await _channel.invokeMethod<String>('handleOffer', {
         'role': role,
@@ -51,6 +54,7 @@ class NativeStreamingService {
     String? mid,
     required int lineIndex,
   }) async {
+    init();
     try {
       await _channel.invokeMethod('addIceCandidate', {
         'role': role,
