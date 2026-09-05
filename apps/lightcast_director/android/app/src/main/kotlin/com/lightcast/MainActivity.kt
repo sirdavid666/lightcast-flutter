@@ -18,15 +18,12 @@ class MainActivity: FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Force landscape orientation
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        
+
         flutterEngine.platformViewsController.registry.registerViewFactory(
             "lightcast_camera_view",
             CameraPlatformViewFactory()
@@ -36,6 +33,8 @@ class MainActivity: FlutterActivity() {
         methodChannel.setMethodCallHandler { call, result ->
             handleMethod(call, result)
         }
+
+        StreamingService.attachChannel(methodChannel)
     }
 
     private fun handleMethod(call: MethodCall, result: MethodChannel.Result) {
