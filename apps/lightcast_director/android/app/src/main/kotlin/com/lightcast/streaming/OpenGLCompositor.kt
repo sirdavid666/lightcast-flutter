@@ -438,7 +438,9 @@ class OpenGLCompositor(
       val seconds = System.nanoTime() / 1_000_000_000.0
       val speed = 26f
       val cycle = totalHeight + regionHeight
-      var y = regionTop - totalHeight + ((seconds * speed) % cycle).toFloat()
+      // FIXED: scroll UP so the first verse appears first and the last verse ends the loop.
+      val progress = ((seconds * speed) % cycle).toFloat()
+      var y = regionBottom - progress
 
       canvas.save()
       canvas.clipRect(0f, regionTop, OUTPUT_WIDTH.toFloat(), regionBottom)
