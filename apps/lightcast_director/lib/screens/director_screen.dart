@@ -374,7 +374,7 @@ class _LargeBroadcastScreen extends StatefulWidget {
 }
 
 class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _tickerController;
   late final Animation<double> _tickerAnimation;
   late final AnimationController _prompterController;
