@@ -18,12 +18,15 @@ class MainActivity: FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Force landscape orientation
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-
+        
         flutterEngine.platformViewsController.registry.registerViewFactory(
             "lightcast_camera_view",
             CameraPlatformViewFactory()
@@ -34,7 +37,17 @@ class MainActivity: FlutterActivity() {
             handleMethod(call, result)
         }
 
-        StreamingService.attachChannel(methodChannel)
+        // 🔥 ADDED: Give the native service a way to send ICE candidates back to Flutter
+        StreamingService.onIceCandidateGenerated = { role, sdp, mid, lineIndex ->
+            runOnUiThread {
+                methodChannel.invokeMethod("onIceCandidate", mapOf(
+                    "role" to role,
+                    "sdp" to sdp,
+                    "mid" to mid,
+                    "lineIndex" to lineIndex
+                ))
+            }
+        }
     }
 
     private fun handleMethod(call: MethodCall, result: MethodChannel.Result) {
