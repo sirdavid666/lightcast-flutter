@@ -82,11 +82,14 @@ class DirectorDiscovery {
   /// device or a network connection.
   static List<String> localNetworkCandidates(String localAddress) {
     final octets = localAddress.split('.').map(int.tryParse).toList();
-    if (octets.length != 4 || octets.any((octet) => octet == null)) {
+    if (!_isValidIpv4(octets)) {
       return const <String>[];
     }
     final prefix = '${octets[0]}.${octets[1]}.${octets[2]}';
     final localHost = octets[3]!;
+    if (localHost == 0 || localHost == 255) {
+      return const <String>[];
+    }
     return <String>[
       for (var host = 1; host < 255; host++)
         if (host != localHost) '$prefix.$host',
@@ -134,11 +137,15 @@ class DirectorDiscovery {
 
   static bool _isPrivateIpv4(String value) {
     final octets = value.split('.').map(int.tryParse).toList();
-    if (octets.length != 4 || octets.any((octet) => octet == null)) return false;
+    if (!_isValidIpv4(octets)) return false;
     final first = octets[0]!;
     final second = octets[1]!;
     return first == 10 ||
         (first == 192 && second == 168) ||
         (first == 172 && second >= 16 && second <= 31);
   }
+
+  static bool _isValidIpv4(List<int?> octets) =>
+      octets.length == 4 &&
+      octets.every((octet) => octet != null && octet >= 0 && octet <= 255);
 }

@@ -13,5 +13,13 @@ void main() {
 
   test('ignores malformed local addresses', () {
     expect(DirectorDiscovery.localNetworkCandidates('not-an-ip'), isEmpty);
+    expect(DirectorDiscovery.localNetworkCandidates('10.3.105'), isEmpty);
+    expect(DirectorDiscovery.localNetworkCandidates('10.3.105.256'), isEmpty);
+    expect(DirectorDiscovery.localNetworkCandidates('10.3.105.-1'), isEmpty);
+  });
+
+  test('rejects IPv4 network and broadcast addresses as local hosts', () {
+    expect(DirectorDiscovery.localNetworkCandidates('10.3.105.0'), isEmpty);
+    expect(DirectorDiscovery.localNetworkCandidates('10.3.105.255'), isEmpty);
   });
 }

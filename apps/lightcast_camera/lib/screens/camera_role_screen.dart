@@ -120,6 +120,7 @@ class CameraPreviewScreen extends ConsumerStatefulWidget {
 class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
     with WidgetsBindingObserver {
   LanCameraTransport? _transport;
+  late final TextEditingController _directorIpController;
   String? _cameraError;
   bool _isConnecting = false;
 
@@ -127,6 +128,7 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _directorIpController = TextEditingController();
   }
 
   Future<void> _connectToDirector() async {
@@ -159,7 +161,8 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
       },
     );
     try {
-      await transport.start();
+      final manualIp = _directorIpController.text.trim();
+      await transport.start(manualIp.isEmpty ? null : manualIp);
       if (!mounted) {
         await transport.stop();
         return;
@@ -189,6 +192,7 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _transport?.stop();
+    _directorIpController.dispose();
     super.dispose();
   }
 
@@ -309,6 +313,17 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white70, fontSize: 12),
                   ),
+                   const SizedBox(height: 10),
+                   TextField(
+                     controller: _directorIpController,
+                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                     textInputAction: TextInputAction.done,
+                     decoration: const InputDecoration(
+                       labelText: 'Manual Director IP (optional)',
+                       hintText: 'Use only if auto-discovery cannot find it',
+                       prefixIcon: Icon(Icons.router_outlined),
+                     ),
+                   ),
                   const SizedBox(height: 18),
                   SizedBox(
                     width: double.infinity,
