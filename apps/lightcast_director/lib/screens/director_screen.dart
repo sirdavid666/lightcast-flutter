@@ -16,7 +16,7 @@ final signalingServerProvider = Provider<SignalingServer>((ref) {
       ref.read(productionProvider.notifier).setCameraStatus(role, connected);
     },
   );
-  unawaited(server.start().catchError((error, stack) {
+   unawaited(server.start().catchError((error, _) {
     debugPrint('[SignalingServer] failed to start: $error');
   }));
   ref.onDispose(() {

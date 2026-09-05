@@ -236,7 +236,7 @@ class OpenGLCompositor(
   }
 
   override fun drawFilter() {
-    if (showTicker && tickerText.isNotBlank()) overlayDirty = true
+    if (showTicker) overlayDirty = true
     val pastor = frameHub.latestFrame("pastor")
     val crowd = frameHub.latestFrame("crowd")
     if (pastor !== uploadedPastor) {
@@ -390,13 +390,29 @@ class OpenGLCompositor(
       paint.color = Color.argb(215, 0, 0, 0)
       canvas.drawRoundRect(RectF(90f, 40f, 1190f, 185f), 18f, 18f, paint)
       paint.color = Color.WHITE
-      paint.textSize = 34f
       paint.textAlign = Paint.Align.CENTER
-      canvas.drawText(scriptureText.take(90), OUTPUT_WIDTH / 2f, 112f, paint)
+      drawFittedText(
+        canvas,
+        paint,
+        scriptureText,
+        OUTPUT_WIDTH / 2f,
+        112f,
+        maxWidth = 1020f,
+        maxTextSize = 34f,
+        minTextSize = 12f
+      )
       if (scriptureReference.isNotBlank()) {
         paint.color = Color.argb(225, 220, 230, 220)
-        paint.textSize = 22f
-        canvas.drawText(scriptureReference.take(60), OUTPUT_WIDTH / 2f, 155f, paint)
+        drawFittedText(
+          canvas,
+          paint,
+          scriptureReference,
+          OUTPUT_WIDTH / 2f,
+          155f,
+          maxWidth = 1020f,
+          maxTextSize = 22f,
+          minTextSize = 10f
+        )
       }
     }
 
@@ -427,17 +443,29 @@ class OpenGLCompositor(
       canvas.drawText(lyricsText.take(72), OUTPUT_WIDTH / 2f, 588f, paint)
     }
 
-    if (showTicker && tickerText.isNotBlank()) {
+    if (showTicker) {
+      val displayTicker = tickerText.trim().ifEmpty { "WELCOME TO SUNDAY SERVICE" }
       paint.color = Color.argb(230, 13, 20, 34)
       canvas.drawRect(0f, 660f, OUTPUT_WIDTH.toFloat(), OUTPUT_HEIGHT.toFloat(), paint)
+      paint.color = Color.YELLOW
+      canvas.drawRect(0f, 660f, 120f, OUTPUT_HEIGHT.toFloat(), paint)
+      paint.color = Color.BLACK
+      paint.textSize = 28f
+      paint.textAlign = Paint.Align.CENTER
+      canvas.drawText("NEWS", 60f, 700f, paint)
+
       paint.color = Color.WHITE
       paint.textSize = 28f
       paint.textAlign = Paint.Align.LEFT
-      val cycle = paint.measureText(tickerText.take(140)) + 80f
+      val tickerSegment = displayTicker.take(140)
+      val cycle = paint.measureText(tickerSegment) + 80f
       val offset = ((System.nanoTime() / 1_000_000_000.0 * 120.0) % cycle.toDouble()).toFloat()
       val x = OUTPUT_WIDTH - offset
-      canvas.drawText(tickerText.take(140), x, 700f, paint)
-      canvas.drawText(tickerText.take(140), x + cycle, 700f, paint)
+      canvas.save()
+      canvas.clipRect(120f, 660f, OUTPUT_WIDTH.toFloat(), OUTPUT_HEIGHT.toFloat())
+      canvas.drawText(tickerSegment, x, 700f, paint)
+      canvas.drawText(tickerSegment, x + cycle, 700f, paint)
+      canvas.restore()
     }
 
     logo?.let { source ->
@@ -459,5 +487,28 @@ class OpenGLCompositor(
     GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
     bitmap.recycle()
     overlayDirty = false
+  }
+
+  private fun drawFittedText(
+    canvas: Canvas,
+    paint: Paint,
+    text: String,
+    x: Float,
+    baseline: Float,
+    maxWidth: Float,
+    maxTextSize: Float,
+    minTextSize: Float
+  ) {
+    var value = text.trim()
+    var textSize = maxTextSize
+    paint.textSize = textSize
+    while (textSize > minTextSize && paint.measureText(value) > maxWidth) {
+      textSize -= 1f
+      paint.textSize = textSize
+    }
+    while (value.isNotEmpty() && paint.measureText(value) > maxWidth) {
+      value = value.dropLast(1).trimEnd() + "…"
+    }
+    canvas.drawText(value, x, baseline, paint)
   }
 }

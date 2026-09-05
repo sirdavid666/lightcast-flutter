@@ -429,7 +429,9 @@ class PipPanel extends ConsumerWidget {
     return PanelShell(
       children: [
         const _PanelTitle('PIP POSITION'),
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
             IconButton(onPressed: () => controller.movePip(dx: -.04), icon: const Icon(Icons.arrow_back)),
             IconButton(onPressed: () => controller.movePip(dy: -.04), icon: const Icon(Icons.arrow_upward)),
