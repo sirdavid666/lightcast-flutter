@@ -16,6 +16,9 @@ final signalingServerProvider = Provider<SignalingServer>((ref) {
     onCameraStatusChanged: (role, connected) {
       ref.read(productionProvider.notifier).setCameraStatus(role, connected);
     },
+    onIceDiagnostics: (role, event) {
+      ref.read(iceDiagnosticsProvider.notifier).record(role, event);
+    },
   );
    unawaited(server.start().catchError((error, _) {
     debugPrint('[SignalingServer] failed to start: $error');

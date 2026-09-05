@@ -123,6 +123,7 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
   String? _cameraError;
   bool _isConnecting = false;
   String _stageLabel = '';
+  int _directorCandidatesReceived = 0;
 
   @override
   void initState() {
@@ -137,6 +138,7 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
       _isConnecting = true;
       _cameraError = null;
       _stageLabel = 'Starting...';
+      _directorCandidatesReceived = 0;
     });
     final role = ref.read(cameraProvider).role == CameraRole.pastor ? 'pastor' : 'crowd';
     final transport = LanCameraTransport(
@@ -144,6 +146,10 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
       onStageChanged: (stage) {
         if (!mounted) return;
         setState(() => _stageLabel = stage);
+      },
+      onCandidateReceivedFromDirector: (count) {
+        if (!mounted) return;
+        setState(() => _directorCandidatesReceived = count);
       },
       onStateChanged: (status, error) {
         if (!mounted) return;
@@ -354,6 +360,14 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
                       _Metric(icon: Icons.lan_outlined, label: 'WebRTC LAN'),
                     ],
                   ),
+                   const SizedBox(height: 8),
+                   Align(
+                     alignment: Alignment.centerLeft,
+                     child: Text(
+                       'ICE candidates from Director: $_directorCandidatesReceived',
+                       style: const TextStyle(color: Colors.white70, fontSize: 11),
+                     ),
+                   ),
                   const SizedBox(height: 12),
                   const Text(
                     'Director is found automatically on this Wi-Fi network.',

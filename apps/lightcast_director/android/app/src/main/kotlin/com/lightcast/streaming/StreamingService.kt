@@ -474,7 +474,18 @@ class StreamingService : Service() {
 
     val configuration = PeerConnection.RTCConfiguration(
       listOf(
-        PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()
+        PeerConnection.IceServer.builder("stun:stun.l.google.com:19302")
+          .createIceServer(),
+        PeerConnection.IceServer.builder(
+          listOf(
+            "turn:openrelay.metered.ca:80",
+            "turn:openrelay.metered.ca:443",
+            "turn:openrelay.metered.ca:80?transport=tcp"
+          )
+        )
+          .setUsername("openrelayproject")
+          .setPassword("openrelayproject")
+          .createIceServer()
       )
     )
     val peer = peerFactory.createPeerConnection(

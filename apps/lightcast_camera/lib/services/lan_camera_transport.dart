@@ -14,11 +14,13 @@ typedef CameraTransportStatusCallback = void Function(
 );
 
 typedef CameraTransportStageCallback = void Function(String stage);
+typedef CameraIceCandidateCallback = void Function(int count);
 
 class LanCameraTransport {
   final String role;
   final CameraTransportStatusCallback? onStateChanged;
   final CameraTransportStageCallback? onStageChanged;
+  final CameraIceCandidateCallback? onCandidateReceivedFromDirector;
   final DirectorDiscovery discovery;
   final int maxAutoRetries;
 
@@ -33,8 +35,11 @@ class LanCameraTransport {
   WebSocketChannel? _channel;
   Timer? _connectionTimer;
   final List<Map<String, dynamic>> _pendingCandidates = [];
+  final List<RTCIceCandidate> _pendingRemoteCandidates = [];
 
   int _retryAttempt = 0;
+  int _directorCandidatesReceived = 0;
+  bool _remoteDescriptionSet = false;
   String? _lastDirectorIpArg;
   String? _lastStageFailed;
 
@@ -42,11 +47,13 @@ class LanCameraTransport {
     required this.role,
     this.onStateChanged,
     this.onStageChanged,
+    this.onCandidateReceivedFromDirector,
     DirectorDiscovery? discovery,
     this.maxAutoRetries = 2,
   }) : discovery = discovery ?? DirectorDiscovery();
 
   bool get isRunning => _isRunning;
+  int get directorCandidatesReceived => _directorCandidatesReceived;
 
   void _notify(CameraTransportStatus status, [String? error]) =>
       onStateChanged?.call(status, error);
@@ -60,12 +67,15 @@ class LanCameraTransport {
     if (_isRunning) return;
     _lastDirectorIpArg = directorIp;
     _retryAttempt = 0;
+    _directorCandidatesReceived = 0;
     await _attemptConnect(directorIp);
   }
 
   Future<void> _attemptConnect(String? directorIp) async {
     _stopping = false;
     _hasConnected = false;
+    _remoteDescriptionSet = false;
+    _pendingRemoteCandidates.clear();
     _notify(CameraTransportStatus.connecting);
 
     try {
@@ -100,7 +110,18 @@ class LanCameraTransport {
       _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
       localRenderer.srcObject = _localStream;
       _peerConnection = await createPeerConnection({
-        'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}],
+        'iceServers': [
+          {'urls': 'stun:stun.l.google.com:19302'},
+          {
+            'urls': [
+              'turn:openrelay.metered.ca:80',
+              'turn:openrelay.metered.ca:443',
+              'turn:openrelay.metered.ca:80?transport=tcp',
+            ],
+            'username': 'openrelayproject',
+            'credential': 'openrelayproject',
+          },
+        ],
       }, {'mandatory': {}, 'optional': []});
       for (final track in _localStream!.getTracks()) {
         await _peerConnection!.addTrack(track, _localStream!);
@@ -154,15 +175,27 @@ class LanCameraTransport {
             await _peerConnection?.setRemoteDescription(
               RTCSessionDescription(data['sdp'] as String, 'answer'),
             );
+            _remoteDescriptionSet = true;
+            for (final candidate in _pendingRemoteCandidates) {
+              await _peerConnection?.addCandidate(candidate);
+            }
+            _pendingRemoteCandidates.clear();
             _stage('ICE connecting...');
             debugPrint('[LanCameraTransport] Answer received. Waiting for ICE connection.');
           } else if (data['type'] == 'candidate') {
             final candidate = Map<String, dynamic>.from(data['candidate'] as Map);
-            await _peerConnection?.addCandidate(RTCIceCandidate(
+            final remoteCandidate = RTCIceCandidate(
               candidate['candidate'] as String?,
               candidate['sdpMid'] as String?,
               (candidate['sdpMLineIndex'] as num?)?.toInt(),
-            ));
+            );
+            _directorCandidatesReceived++;
+            onCandidateReceivedFromDirector?.call(_directorCandidatesReceived);
+            if (_remoteDescriptionSet) {
+              await _peerConnection?.addCandidate(remoteCandidate);
+            } else {
+              _pendingRemoteCandidates.add(remoteCandidate);
+            }
           } else if (data['type'] == 'error') {
             _lastStageFailed = 'Waiting for Director answer';
             await _fail(data['message'] as String? ?? 'Director rejected the offer');
@@ -210,6 +243,8 @@ class LanCameraTransport {
       _channel?.sink.add(jsonEncode(candidate));
     }
     _pendingCandidates.clear();
+    _pendingRemoteCandidates.clear();
+    _remoteDescriptionSet = false;
   }
 
   void _sendSignalingMessage(Map<String, dynamic> message) {

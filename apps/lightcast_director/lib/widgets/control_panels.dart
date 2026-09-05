@@ -23,6 +23,7 @@ class CamerasPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productionProvider);
+    final iceDiagnostics = ref.watch(iceDiagnosticsProvider);
     final controller = ref.read(productionProvider.notifier);
     return PanelShell(
       children: [
@@ -42,34 +43,38 @@ class CamerasPanel extends ConsumerWidget {
         const SizedBox(height: 14),
         const _PanelTitle('SOURCES'),
         ...state.sources.map(
-          (source) => ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              Icons.circle,
-              color: source.status == 'connected'
-                  ? const Color(0xFF22C55E)
-                  : Colors.white24,
-              size: 10,
-            ),
-            title: Text(source.label),
-            subtitle: Text(
-              source.status == 'connected'
-                  ? '${source.transport.toUpperCase()} • ${source.signalPercent}% signal'
-                  : 'OFFLINE • Pair camera to connect',
-            ),
-            trailing: Text(
-              source.status == 'connected'
-                  ? '${source.batteryPercent}%'
-                  : 'OFFLINE',
-              style: TextStyle(
+          (source) {
+            final diagnostics =
+                iceDiagnostics[source.role.toLowerCase()] ?? const IceDiagnostics();
+            return ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                Icons.circle,
                 color: source.status == 'connected'
-                    ? Colors.white
-                    : Colors.white38,
-                fontSize: 11,
+                    ? const Color(0xFF22C55E)
+                    : Colors.white24,
+                size: 10,
               ),
-            ),
-          ),
+              title: Text(source.label),
+              subtitle: Text(
+                '${source.status == 'connected' ? '${source.transport.toUpperCase()} • ${source.signalPercent}% signal' : 'OFFLINE • Pair camera to connect'}\n'
+                'ICE  Offer RX ${diagnostics.offersReceived} • Answer TX ${diagnostics.answersSent}\n'
+                'ICE  Cam cand RX ${diagnostics.candidatesReceivedFromCamera} • Dir cand TX ${diagnostics.candidatesSentToCamera}',
+              ),
+              trailing: Text(
+                source.status == 'connected'
+                    ? '${source.batteryPercent}%'
+                    : 'OFFLINE',
+                style: TextStyle(
+                  color: source.status == 'connected'
+                      ? Colors.white
+                      : Colors.white38,
+                  fontSize: 11,
+                ),
+              ),
+            );
+          },
         ),
       ],
     );

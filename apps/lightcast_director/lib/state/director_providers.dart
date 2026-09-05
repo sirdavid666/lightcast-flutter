@@ -8,6 +8,85 @@ import '../services/native_streaming_service.dart';
 // Provider to access the WebRTC transport from main.dart
 final webrtcTransportProvider = Provider<RTCVideoRenderer?>((ref) => null);
 
+enum IceDiagnosticKind {
+  offersReceived,
+  answersSent,
+  candidatesReceivedFromCamera,
+  candidatesSentToCamera,
+}
+
+class IceDiagnostics {
+  const IceDiagnostics({
+    this.offersReceived = 0,
+    this.answersSent = 0,
+    this.candidatesReceivedFromCamera = 0,
+    this.candidatesSentToCamera = 0,
+  });
+
+  final int offersReceived;
+  final int answersSent;
+  final int candidatesReceivedFromCamera;
+  final int candidatesSentToCamera;
+
+  IceDiagnostics record(IceDiagnosticKind kind) {
+    switch (kind) {
+      case IceDiagnosticKind.offersReceived:
+        return copyWith(offersReceived: offersReceived + 1);
+      case IceDiagnosticKind.answersSent:
+        return copyWith(answersSent: answersSent + 1);
+      case IceDiagnosticKind.candidatesReceivedFromCamera:
+        return copyWith(
+          candidatesReceivedFromCamera: candidatesReceivedFromCamera + 1,
+        );
+      case IceDiagnosticKind.candidatesSentToCamera:
+        return copyWith(candidatesSentToCamera: candidatesSentToCamera + 1);
+    }
+  }
+
+  IceDiagnostics copyWith({
+    int? offersReceived,
+    int? answersSent,
+    int? candidatesReceivedFromCamera,
+    int? candidatesSentToCamera,
+  }) =>
+      IceDiagnostics(
+        offersReceived: offersReceived ?? this.offersReceived,
+        answersSent: answersSent ?? this.answersSent,
+        candidatesReceivedFromCamera:
+            candidatesReceivedFromCamera ?? this.candidatesReceivedFromCamera,
+        candidatesSentToCamera:
+            candidatesSentToCamera ?? this.candidatesSentToCamera,
+      );
+}
+
+final iceDiagnosticsProvider = StateNotifierProvider<
+    IceDiagnosticsController, Map<String, IceDiagnostics>>(
+  (ref) => IceDiagnosticsController(),
+);
+
+class IceDiagnosticsController
+    extends StateNotifier<Map<String, IceDiagnostics>> {
+  IceDiagnosticsController()
+      : super(const {
+          'pastor': IceDiagnostics(),
+          'crowd': IceDiagnostics(),
+        });
+
+  void record(String role, String event) {
+    final kind = switch (event) {
+      'offerReceived' => IceDiagnosticKind.offersReceived,
+      'answerSent' => IceDiagnosticKind.answersSent,
+      'candidateReceivedFromCamera' =>
+        IceDiagnosticKind.candidatesReceivedFromCamera,
+      'candidateSentToCamera' => IceDiagnosticKind.candidatesSentToCamera,
+      _ => null,
+    };
+    if (kind == null) return;
+    final current = state[role] ?? const IceDiagnostics();
+    state = {...state, role: current.record(kind)};
+  }
+}
+
 final productionProvider =
     StateNotifierProvider<ProductionController, ProductionState>(
   (ref) => ProductionController(),

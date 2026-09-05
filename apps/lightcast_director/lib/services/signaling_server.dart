@@ -12,19 +12,29 @@ import 'native_streaming_service.dart';
 import 'streaming_service.dart';
 
 typedef CameraStatusCallback = void Function(String role, bool connected);
+typedef CameraIceDiagnosticsCallback = void Function(
+  String role,
+  String event,
+);
 
 class SignalingServer {
   HttpServer? _server;
   final Map<String, WebSocketChannel> _channels = {};
   final CameraStatusCallback? onCameraStatusChanged;
+  final CameraIceDiagnosticsCallback? onIceDiagnostics;
 
-  SignalingServer({this.onCameraStatusChanged});
+  SignalingServer({
+    this.onCameraStatusChanged,
+    this.onIceDiagnostics,
+  });
 
   Future<void> start() async {
     if (_server != null) return;
 
-    NativeStreamingService.init();
     NativeStreamingService.onLocalIceCandidate = _sendCandidateToCamera;
+    // Install the native -> Dart handler before discovery can expose the
+    // health endpoint and a camera can send its first offer.
+    NativeStreamingService.init();
 
     final websocketHandler = webSocketHandler((webSocket, HttpRequest request) {
       final role = request.uri.pathSegments.isNotEmpty
@@ -80,6 +90,7 @@ class SignalingServer {
         'sdpMLineIndex': candidate['lineIndex'],
       },
     }));
+    onIceDiagnostics?.call(role, 'candidateSentToCamera');
   }
 
   Future<void> _handleMessage(
@@ -90,6 +101,7 @@ class SignalingServer {
     try {
       final data = jsonDecode(message as String) as Map<String, dynamic>;
       if (data['type'] == 'offer') {
+        onIceDiagnostics?.call(role, 'offerReceived');
         debugPrint('[SignalingServer] offer received from $role');
         final answerSdp = await StreamingService.handleOffer(
           data['sdp'] as String? ?? '',
@@ -102,10 +114,14 @@ class SignalingServer {
           }));
         } else if (identical(_channels[role], webSocket)) {
           webSocket.sink.add(jsonEncode({'type': 'answer', 'sdp': answerSdp}));
+          onIceDiagnostics?.call(role, 'answerSent');
         }
       } else if (data['type'] == 'candidate') {
         final raw = data['candidate'];
         final candidate = raw is Map ? Map<String, dynamic>.from(raw) : data;
+        if ((candidate['candidate'] as String? ?? '').isNotEmpty) {
+          onIceDiagnostics?.call(role, 'candidateReceivedFromCamera');
+        }
         await StreamingService.addIceCandidate(
           role: role,
           sdp: candidate['candidate'] as String? ?? '',
