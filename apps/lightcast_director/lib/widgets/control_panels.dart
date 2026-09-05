@@ -202,21 +202,30 @@ class _LyricsPanelState extends ConsumerState<LyricsPanel> {
     super.dispose();
   }
 
+  void _addStanza() {
+    final current = _controller.text.trimRight();
+    _controller.text = current.isEmpty ? '' : current + '\n\n';
+    _controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: _controller.text.length),
+    );
+    ref.read(productionProvider.notifier).setLyricsText(_controller.text);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
-    
+
     if (_controller.text != state.lyrics.text) {
       _controller.text = state.lyrics.text;
     }
-    
+
     return PanelShell(
       children: [
-        const _PanelTitle('CURRENT SONG'),
+        const _PanelTitle('CURRENT SONG / HYMN'),
         DropdownButtonFormField<String>(
           value: state.lyrics.section,
-          items: const ['Verse', 'Chorus', 'Bridge']
+          items: const ['Verse', 'Chorus', 'Bridge', 'Hymn']
               .map((value) => DropdownMenuItem(value: value, child: Text(value)))
               .toList(),
           onChanged: controller.setLyricsSection,
@@ -224,9 +233,23 @@ class _LyricsPanelState extends ConsumerState<LyricsPanel> {
         const SizedBox(height: 10),
         TextFormField(
           controller: _controller,
-          maxLines: 2,
-          decoration: const InputDecoration(labelText: 'Lyrics text'),
+          maxLines: 8,
+          decoration: const InputDecoration(
+            labelText: 'Lyrics / hymn text',
+            hintText: 'Type stanza 1 here...',
+          ),
           onChanged: controller.setLyricsText,
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _addStanza,
+          icon: const Icon(Icons.add),
+          label: const Text('ADD STANZA'),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Stanzas are separated by a blank line. The Program monitor shows them as a slow teleprompter.',
+          style: TextStyle(color: Colors.white54, fontSize: 11),
         ),
         const SizedBox(height: 10),
         _ToggleAction(
@@ -301,11 +324,11 @@ class _TickerPanelState extends ConsumerState<TickerPanel> {
   Widget build(BuildContext context) {
     final state = ref.watch(productionProvider);
     final controller = ref.read(productionProvider.notifier);
-    
+
     if (_controller.text != state.ticker.text) {
       _controller.text = state.ticker.text;
     }
-    
+
     return PanelShell(
       children: [
         const _PanelTitle('TICKER DRAFT'),
