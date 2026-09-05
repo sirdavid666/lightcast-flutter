@@ -13,11 +13,15 @@ typedef CameraTransportStatusCallback = void Function(
   String? error,
 );
 
-/// Handles WebRTC transport for camera phones to send video to Director.
+typedef CameraTransportStageCallback = void Function(String stage);
+
 class LanCameraTransport {
   final String role;
   final CameraTransportStatusCallback? onStateChanged;
+  final CameraTransportStageCallback? onStageChanged;
   final DirectorDiscovery discovery;
+  final int maxAutoRetries;
+
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
   final RTCVideoRenderer localRenderer = RTCVideoRenderer();
@@ -30,10 +34,16 @@ class LanCameraTransport {
   Timer? _connectionTimer;
   final List<Map<String, dynamic>> _pendingCandidates = [];
 
+  int _retryAttempt = 0;
+  String? _lastDirectorIpArg;
+  String? _lastStageFailed;
+
   LanCameraTransport({
     required this.role,
     this.onStateChanged,
+    this.onStageChanged,
     DirectorDiscovery? discovery,
+    this.maxAutoRetries = 2,
   }) : discovery = discovery ?? DirectorDiscovery();
 
   bool get isRunning => _isRunning;
@@ -41,23 +51,33 @@ class LanCameraTransport {
   void _notify(CameraTransportStatus status, [String? error]) =>
       onStateChanged?.call(status, error);
 
-  /// Starts the camera connection.
-  ///
-  /// [directorIp] remains an optional escape hatch for diagnostics and older
-  /// installations. Normal app flow passes no address: the Director is found
-  /// automatically on the local network and the successful host is cached.
+  void _stage(String label) {
+    debugPrint('[LanCameraTransport] stage: $label');
+    onStageChanged?.call(label);
+  }
+
   Future<void> start([String? directorIp]) async {
     if (_isRunning) return;
+    _lastDirectorIpArg = directorIp;
+    _retryAttempt = 0;
+    await _attemptConnect(directorIp);
+  }
+
+  Future<void> _attemptConnect(String? directorIp) async {
     _stopping = false;
     _hasConnected = false;
     _notify(CameraTransportStatus.connecting);
 
     try {
       final configuredHost = directorIp?.trim();
+      if (configuredHost == null || configuredHost.isEmpty) {
+        _stage('Finding Director...');
+      }
       _directorIp = configuredHost == null || configuredHost.isEmpty
           ? await discovery.discover()
           : configuredHost;
       if (_directorIp == null) {
+        _lastStageFailed = 'Finding Director';
         throw SocketException(
           'No LightCast Director found on the local network',
         );
@@ -91,8 +111,12 @@ class LanCameraTransport {
         if (value.contains('connected') || value.contains('completed')) {
           _hasConnected = true;
           _connectionTimer?.cancel();
+          _stage('Connected');
           _notify(CameraTransportStatus.connected);
+        } else if (value.contains('checking')) {
+          _stage('ICE connecting...');
         } else if (value.contains('failed') || value.contains('closed')) {
+          _lastStageFailed = 'ICE connecting';
           unawaited(_fail('WebRTC ICE state: $state'));
         }
       };
@@ -110,11 +134,19 @@ class LanCameraTransport {
         'offerToReceiveAudio': 1,
       });
       await _peerConnection!.setLocalDescription(offer);
+
+      _stage('Connecting to Director...');
       _channel = WebSocketChannel.connect(
         Uri.parse('ws://$_directorIp:8080/$role'),
       );
-      await _channel!.ready.timeout(const Duration(seconds: 8));
+      try {
+        await _channel!.ready.timeout(const Duration(seconds: 8));
+      } catch (_) {
+        _lastStageFailed = 'Signaling connection';
+        rethrow;
+      }
       _channelReady = true;
+      _stage('Signaling connected');
       _channel!.stream.listen((message) async {
         try {
           final data = jsonDecode(message as String) as Map<String, dynamic>;
@@ -122,6 +154,7 @@ class LanCameraTransport {
             await _peerConnection?.setRemoteDescription(
               RTCSessionDescription(data['sdp'] as String, 'answer'),
             );
+            _stage('ICE connecting...');
             debugPrint('[LanCameraTransport] Answer received. Waiting for ICE connection.');
           } else if (data['type'] == 'candidate') {
             final candidate = Map<String, dynamic>.from(data['candidate'] as Map);
@@ -131,6 +164,7 @@ class LanCameraTransport {
               (candidate['sdpMLineIndex'] as num?)?.toInt(),
             ));
           } else if (data['type'] == 'error') {
+            _lastStageFailed = 'Waiting for Director answer';
             await _fail(data['message'] as String? ?? 'Director rejected the offer');
           }
         } catch (error) {
@@ -146,15 +180,28 @@ class LanCameraTransport {
 
       _flushPendingCandidates();
       _sendSignalingMessage({'type': 'offer', 'sdp': offer.sdp});
+      _stage('Waiting for Director answer...');
       _isRunning = true;
       _connectionTimer = Timer(const Duration(seconds: 20), () {
-        if (!_hasConnected) unawaited(_fail('Timed out waiting for WebRTC connection'));
+        if (!_hasConnected) {
+          _lastStageFailed ??= 'Waiting for Director answer';
+          unawaited(_fail('Timed out waiting for WebRTC connection'));
+        }
       });
       debugPrint('[LanCameraTransport] Offer sent, waiting for Director answer and ICE.');
     } catch (error) {
       await _closeResources();
-      _notify(CameraTransportStatus.failed, error.toString());
-      rethrow;
+      final shouldRetry = !_stopping && _retryAttempt < maxAutoRetries;
+      if (shouldRetry) {
+        _retryAttempt++;
+        _stage('Retrying (${_retryAttempt}/$maxAutoRetries)...');
+        await Future<void>.delayed(const Duration(seconds: 2));
+        await _attemptConnect(_lastDirectorIpArg);
+        return;
+      }
+      _isRunning = false;
+      final stageInfo = _lastStageFailed != null ? ' (failed at: $_lastStageFailed)' : '';
+      _notify(CameraTransportStatus.failed, '${error.toString()}$stageInfo');
     }
   }
 
@@ -178,7 +225,17 @@ class LanCameraTransport {
     _stopping = true;
     await _closeResources();
     _isRunning = false;
-    _notify(CameraTransportStatus.failed, error);
+
+    final shouldRetry = _retryAttempt < maxAutoRetries;
+    if (shouldRetry) {
+      _retryAttempt++;
+      _stage('Retrying (${_retryAttempt}/$maxAutoRetries)...');
+      await Future<void>.delayed(const Duration(seconds: 2));
+      await _attemptConnect(_lastDirectorIpArg);
+      return;
+    }
+    final stageInfo = _lastStageFailed != null ? ' (failed at: $_lastStageFailed)' : '';
+    _notify(CameraTransportStatus.failed, '$error$stageInfo');
   }
 
   Future<void> _closeResources() async {
