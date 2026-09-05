@@ -136,6 +136,15 @@ class ProductionController extends StateNotifier<ProductionState> {
     _syncNativeScene();
   }
 
+  /// Tap the PIP box on the PROGRAM screen: swap main <-> PIP instantly.
+  void swapPip() {
+    if (state.layout == CameraLayout.pastorInCrowd) {
+      setLayout(CameraLayout.crowdInPastor);
+    } else if (state.layout == CameraLayout.crowdInPastor) {
+      setLayout(CameraLayout.pastorInCrowd);
+    }
+  }
+
   void toggleLayer(LayerKind kind) {
     final index = state.programScene.layers.indexWhere((l) => l.kind == kind);
     if (index == -1) return;
