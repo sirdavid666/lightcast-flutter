@@ -16,6 +16,7 @@ dependencies:
   shelf: 1.4.1
   shelf_web_socket: 1.0.4
   web_socket_channel: 2.4.0
+  qr_flutter: 4.1.0
 
 dev_dependencies:
   flutter_test:
@@ -24,7 +25,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
-  # This section tells Flutter to include your images folder
   assets:
     - assets/images/
