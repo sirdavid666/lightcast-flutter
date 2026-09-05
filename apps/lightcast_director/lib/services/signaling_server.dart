@@ -8,6 +8,7 @@ import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_web_socket/shelf_web_socket.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import 'native_streaming_service.dart';
 import 'streaming_service.dart';
 
 typedef CameraStatusCallback = void Function(String role, bool connected);
@@ -21,6 +22,10 @@ class SignalingServer {
 
   Future<void> start() async {
     if (_server != null) return;
+
+    NativeStreamingService.init();
+    NativeStreamingService.onLocalIceCandidate = _sendCandidateToCamera;
+
     final websocketHandler = webSocketHandler((webSocket, HttpRequest request) {
       final role = request.uri.pathSegments.isNotEmpty
           ? request.uri.pathSegments.first
@@ -61,6 +66,22 @@ class SignalingServer {
     debugPrint('[SignalingServer] Listening for cameras on port ' + _server!.port.toString());
   }
 
+  void _sendCandidateToCamera(String role, Map<String, dynamic> candidate) {
+    final channel = _channels[role];
+    if (channel == null) {
+      debugPrint('[SignalingServer] no channel for $role, dropping local candidate');
+      return;
+    }
+    channel.sink.add(jsonEncode({
+      'type': 'candidate',
+      'candidate': {
+        'candidate': candidate['sdp'],
+        'sdpMid': candidate['mid'],
+        'sdpMLineIndex': candidate['lineIndex'],
+      },
+    }));
+  }
+
   Future<void> _handleMessage(
     String role,
     WebSocketChannel webSocket,
@@ -93,7 +114,7 @@ class SignalingServer {
         );
       }
     } catch (error, stack) {
-      debugPrint('[SignalingServer] message error for $role: $error\\n$stack');
+      debugPrint('[SignalingServer] message error for $role: $error\n$stack');
       webSocket.sink.add(jsonEncode({
         'type': 'error',
         'message': 'Director could not process signaling data',
