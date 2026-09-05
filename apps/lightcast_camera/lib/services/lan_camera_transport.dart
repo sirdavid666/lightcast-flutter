@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'director_discovery.dart';
 
 enum CameraTransportStatus { connecting, connected, disconnected, failed }
 
@@ -15,6 +16,7 @@ typedef CameraTransportStatusCallback = void Function(
 class LanCameraTransport {
   final String role;
   final CameraTransportStatusCallback? onStateChanged;
+  final DirectorDiscovery discovery;
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
   final RTCVideoRenderer localRenderer = RTCVideoRenderer();
@@ -27,22 +29,44 @@ class LanCameraTransport {
   Timer? _connectionTimer;
   final List<Map<String, dynamic>> _pendingCandidates = [];
 
-  LanCameraTransport({required this.role, this.onStateChanged});
+  LanCameraTransport({
+    required this.role,
+    this.onStateChanged,
+    DirectorDiscovery? discovery,
+  }) : discovery = discovery ?? DirectorDiscovery();
 
   bool get isRunning => _isRunning;
 
   void _notify(CameraTransportStatus status, [String? error]) =>
       onStateChanged?.call(status, error);
 
-  Future<void> start(String directorIp) async {
+  /// Starts the camera connection.
+  ///
+  /// [directorIp] remains an optional escape hatch for diagnostics and older
+  /// installations. Normal app flow passes no address: the Director is found
+  /// automatically on the local network and the successful host is cached.
+  Future<void> start([String? directorIp]) async {
     if (_isRunning) return;
-    _directorIp = directorIp;
     _stopping = false;
     _hasConnected = false;
     _notify(CameraTransportStatus.connecting);
-    debugPrint('[LanCameraTransport] Starting for role: $role, Director: $_directorIp');
 
     try {
+      final configuredHost = directorIp?.trim();
+      _directorIp = configuredHost == null || configuredHost.isEmpty
+          ? await discovery.discover()
+          : configuredHost;
+      if (_directorIp == null) {
+        throw const SocketException(
+          'No LightCast Director found on the local network',
+        );
+      }
+      if (configuredHost != null && configuredHost.isNotEmpty) {
+        await discovery.rememberHost(configuredHost);
+      }
+      debugPrint(
+        '[LanCameraTransport] Starting for role: $role, Director: $_directorIp',
+      );
       await localRenderer.initialize();
       final mediaConstraints = <String, dynamic>{
         'audio': true,

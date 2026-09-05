@@ -158,12 +158,12 @@ class _DirectorIpCardState extends State<_DirectorIpCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Director IP: ' + _ip,
+                  Text('Director: ' + _ip,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 2),
-                  const Text('Enter this address on each camera phone to connect.',
+                  const Text('Cameras discover this Director automatically on the same Wi-Fi.',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: Colors.white70, fontSize: 11)),

@@ -122,13 +122,11 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
   LanCameraTransport? _transport;
   String? _cameraError;
   bool _isConnecting = false;
-  final _directorIpController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _directorIpController.text = '192.168.1.100';
   }
 
   Future<void> _connectToDirector() async {
@@ -161,7 +159,7 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
       },
     );
     try {
-      await transport.start(_directorIpController.text.trim());
+      await transport.start();
       if (!mounted) {
         await transport.stop();
         return;
@@ -191,7 +189,6 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _transport?.stop();
-    _directorIpController.dispose();
     super.dispose();
   }
 
@@ -307,14 +304,10 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
                     ],
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: _directorIpController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Director phone IP address',
-                      hintText: 'Example: 192.168.1.100',
-                      prefixIcon: Icon(Icons.router_outlined),
-                    ),
+                  const Text(
+                    'Director is found automatically on this Wi-Fi network.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                   const SizedBox(height: 18),
                   SizedBox(
@@ -330,7 +323,7 @@ class _CameraPreviewScreenState extends ConsumerState<CameraPreviewScreen>
                              ? 'CONNECTING...'
                              : state.connected
                                  ? 'STOP SENDING FEED'
-                                 : 'CONNECT TO DIRECTOR',
+                             : 'FIND & CONNECT TO DIRECTOR',
                        ),
                     ),
                   ),

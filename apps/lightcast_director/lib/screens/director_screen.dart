@@ -208,7 +208,7 @@ class _TopIpBarState extends State<_TopIpBar> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Director IP: $_ip  —  enter this on each camera',
+                'Director: $_ip  —  cameras auto-discover on Wi-Fi',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
@@ -346,7 +346,7 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
       duration: _tickerDuration(widget.tickerSpeed),
       vsync: this,
     )..repeat();
-    _tickerAnimation = Tween<double>(begin: 1.0, end: -1.0).animate(_tickerController);
+    _tickerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_tickerController);
   }
 
   Duration _tickerDuration(int speed) =>
@@ -500,36 +500,45 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
                       borderRadius: BorderRadius.circular(7),
                       border: Border.all(color: Colors.white.withOpacity(.2)),
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          scripture,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: (16 * scale).clamp(10.0, 18.0),
-                            fontWeight: FontWeight.bold,
-                            shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+                    child: LayoutBuilder(
+                      builder: (context, constraints) => FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.center,
+                        child: SizedBox(
+                          width: constraints.maxWidth,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                scripture,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: (16 * scale).clamp(10.0, 18.0),
+                                  fontWeight: FontWeight.bold,
+                                  shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+                                ),
+                              ),
+                              if (scriptureReference.isNotEmpty) ...[
+                                SizedBox(height: 3 * scale),
+                                Text(
+                                  scriptureReference,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: (11 * scale).clamp(8.0, 13.0),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
-                        if (scriptureReference.isNotEmpty) ...[
-                          SizedBox(height: 3 * scale),
-                          Text(
-                            scriptureReference,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: (11 * scale).clamp(8.0, 13.0),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -568,56 +577,77 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
                   left: 0,
                   right: 0,
                   bottom: 0,
-                child: SizedBox(
-                  height: tickerHeight,
-                  child: ColoredBox(
-                    color: Colors.blue,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) => ClipRect(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          physics: const NeverScrollableScrollPhysics(),
-                          child: AnimatedBuilder(
-                            animation: _tickerAnimation,
-                            builder: (context, child) => Transform.translate(
-                              offset: Offset(_tickerAnimation.value * constraints.maxWidth, 0),
-                              child: child,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(width: 14 * scale),
-                                Text(
-                                  tickerText,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: tickerFontSize,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                SizedBox(width: 28 * scale),
-                                Text(
-                                  '• NEWS •',
-                                  style: TextStyle(
-                                    color: Colors.yellow,
-                                    fontSize: tickerFontSize,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(width: 28 * scale),
-                                Text(
-                                  tickerText,
-                                  style: TextStyle(color: Colors.white, fontSize: tickerFontSize),
-                                ),
-                              ],
+                  child: SizedBox(
+                    height: tickerHeight,
+                    child: ColoredBox(
+                      color: Colors.blue,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 54 * scale,
+                            height: tickerHeight,
+                            alignment: Alignment.center,
+                            color: Colors.yellow,
+                            child: Text(
+                              'NEWS',
+                              maxLines: 1,
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: tickerFontSize,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: .4,
+                              ),
                             ),
                           ),
-                        ),
+                          Expanded(
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final messageStyle = TextStyle(
+                                  color: Colors.white,
+                                  fontSize: tickerFontSize,
+                                  fontWeight: FontWeight.w600,
+                                );
+                                final messagePainter = TextPainter(
+                                  text: TextSpan(text: tickerText, style: messageStyle),
+                                  textDirection: TextDirection.ltr,
+                                )..layout();
+                                final messageGap = 28 * scale;
+                                final segmentWidth = messagePainter.width + messageGap;
+
+                                return ClipRect(
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    child: AnimatedBuilder(
+                                      animation: _tickerAnimation,
+                                      builder: (context, child) => Transform.translate(
+                                        offset: Offset(
+                                          -_tickerAnimation.value * segmentWidth,
+                                          0,
+                                        ),
+                                        child: child,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          SizedBox(width: 14 * scale),
+                                          Text(tickerText, style: messageStyle),
+                                          SizedBox(width: messageGap),
+                                          Text(tickerText, style: messageStyle),
+                                          SizedBox(width: messageGap),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-              ),
               Positioned(
                 top: 8 * scale,
                 right: 8 * scale,

@@ -9,11 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_webrtc: ^0.11.6 # Match camera app version to prevent SDK errors
+  flutter_webrtc: ^0.11.6
   flutter_riverpod: ^2.5.1
   lightcast_shared:
     path: ../../packages/lightcast_shared
-  shelf: ^1.4.1 # For the local HTTP/WebSocket server
+  shelf: ^1.4.1
   shelf_web_socket: ^1.0.4
   web_socket_channel: ^2.4.0
 

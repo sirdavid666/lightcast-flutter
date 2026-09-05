@@ -8,9 +8,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_webrtc: ^0.11.6 # Downgraded to stable version to fix SDK 36 compile error
+  flutter_webrtc: ^0.11.6
   flutter_riverpod: ^2.5.1
-  web_socket_channel: ^2.4.0  # ← ADD THIS LINE
+  web_socket_channel: ^2.4.0
+  shared_preferences: ^2.3.2
   lightcast_shared:
     path: ../../packages/lightcast_shared
 

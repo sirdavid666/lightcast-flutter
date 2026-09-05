@@ -46,6 +46,22 @@ void main() {
           .payload['text'],
       'The Lord is my shepherd.',
     );
+    expect(
+      controller.state.programScene.layers
+          .firstWhere((layer) => layer.kind == LayerKind.scripture)
+          .payload['reference'],
+      'Psalm 23:1',
+    );
+  });
+
+  test('changing only the scripture reference keeps the Program payload in sync', () {
+    final controller = ProductionController();
+    controller.setScriptureReference('Romans 8:28');
+
+    final scriptureLayer = controller.state.programScene.layers
+        .firstWhere((layer) => layer.kind == LayerKind.scripture);
+    expect(scriptureLayer.payload['reference'], 'Romans 8:28');
+    expect(scriptureLayer.payload['text'], controller.state.scripture.text);
   });
 
   test('ticker edits update Program immediately', () {

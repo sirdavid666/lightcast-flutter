@@ -21,29 +21,42 @@ class SignalingServer {
 
   Future<void> start() async {
     if (_server != null) return;
-    final handler = const Pipeline().addHandler(
-      webSocketHandler((webSocket, HttpRequest request) {
-        final role = request.uri.pathSegments.isNotEmpty
-            ? request.uri.pathSegments.first
-            : 'unknown';
-        _channels[role]?.sink.close();
-        _channels[role] = webSocket;
-        onCameraStatusChanged?.call(role, true);
-        debugPrint('[SignalingServer] camera connected: $role');
+    final websocketHandler = webSocketHandler((webSocket, HttpRequest request) {
+      final role = request.uri.pathSegments.isNotEmpty
+          ? request.uri.pathSegments.first
+          : 'unknown';
+      _channels[role]?.sink.close();
+      _channels[role] = webSocket;
+      onCameraStatusChanged?.call(role, true);
+      debugPrint('[SignalingServer] camera connected: $role');
 
-        webSocket.stream.listen((message) {
-          unawaited(_handleMessage(role, webSocket, message));
-        }, onError: (Object error) {
-          debugPrint('[SignalingServer] WebSocket error for $role: $error');
-        }, onDone: () {
-          if (identical(_channels[role], webSocket)) {
-            _channels.remove(role);
-            onCameraStatusChanged?.call(role, false);
-          }
-          debugPrint('[SignalingServer] camera disconnected: $role');
-        });
-      }),
-    );
+      webSocket.stream.listen((message) {
+        unawaited(_handleMessage(role, webSocket, message));
+      }, onError: (Object error) {
+        debugPrint('[SignalingServer] WebSocket error for $role: $error');
+      }, onDone: () {
+        if (identical(_channels[role], webSocket)) {
+          _channels.remove(role);
+          onCameraStatusChanged?.call(role, false);
+        }
+        debugPrint('[SignalingServer] camera disconnected: $role');
+      });
+    });
+    final handler = const Pipeline().addHandler((request) {
+      if (request.method == 'GET' &&
+          request.url.pathSegments.length == 2 &&
+          request.url.pathSegments[0] == 'lightcast' &&
+          request.url.pathSegments[1] == 'health') {
+        return Response.ok(
+          jsonEncode({
+            'service': 'lightcast-director',
+            'protocolVersion': 1,
+          }),
+          headers: const {'content-type': 'application/json'},
+        );
+      }
+      return websocketHandler(request);
+    });
     _server = await io.serve(handler, '0.0.0.0', 8080);
     debugPrint('[SignalingServer] Listening for cameras on port ' + _server!.port.toString());
   }

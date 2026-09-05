@@ -435,6 +435,7 @@ class StreamingService : Service() {
         lowerThirdTitle = lowerThirdTitle,
         showLyrics = showLyrics,
         showScripture = showScripture,
+        showLowerThird = showLowerThird,
         showTicker = showTicker
       )
     } else {
@@ -448,6 +449,7 @@ class StreamingService : Service() {
         lowerThirdTitle = lowerThirdTitle,
         showLyrics = showLyrics,
         showScripture = showScripture,
+        showLowerThird = showLowerThird,
         showTicker = showTicker
       )
     }
