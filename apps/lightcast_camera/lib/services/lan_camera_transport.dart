@@ -247,7 +247,8 @@ class LanCameraTransport {
     }
     await _localStream?.dispose();
     await _peerConnection?.close();
-    await localRenderer.dispose();
+    // 🔥 FIXED: keep the renderer alive for retries; just unplug the stream.
+    localRenderer.srcObject = null;
     _channel = null;
     _channelReady = false;
     _localStream = null;
@@ -259,6 +260,8 @@ class LanCameraTransport {
     if (_stopping && !_isRunning) return;
     _stopping = true;
     await _closeResources();
+    // Only truly dispose the renderer on a final stop.
+    await localRenderer.dispose();
     _isRunning = false;
     _hasConnected = false;
     _stopping = false;
