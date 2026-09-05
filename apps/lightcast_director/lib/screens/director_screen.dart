@@ -124,9 +124,13 @@ class _DirectorScreenContent extends StatelessWidget {
                                   scriptureReference: state.scripture.reference,
                                   lowerThirdName: state.lowerThird.name,
                                   lowerThirdTitle: state.lowerThird.title,
+                                  countdownSeconds: state.countdown.seconds,
+                                  countdownFullScreen:
+                                      state.countdown.mode == CountdownMode.fullScreen,
                                   tickerText: state.ticker.text,
                                   tickerSpeed: state.ticker.speed,
                                   isProgram: true,
+                                  onSwapPip: () => controller.swapPip(),
                                 ),
                               ),
                             ),
@@ -325,28 +329,6 @@ class NativeCameraView extends StatelessWidget {
       );
 }
 
-class _LiveCameraLayer extends StatelessWidget {
-  const _LiveCameraLayer({required this.role, required this.frame});
-
-  final String role;
-  final NormalizedRect frame;
-
-  @override
-  Widget build(BuildContext context) => Positioned(
-        left: frame.x,
-        top: frame.y,
-        width: frame.width,
-        height: frame.height,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: ColoredBox(
-            color: Colors.black,
-            child: NativeCameraView(role: role),
-          ),
-        ),
-      );
-}
-
 class _LargeBroadcastScreen extends StatefulWidget {
   const _LargeBroadcastScreen({
     required this.title,
@@ -356,9 +338,12 @@ class _LargeBroadcastScreen extends StatefulWidget {
     required this.scriptureReference,
     required this.lowerThirdName,
     required this.lowerThirdTitle,
+    required this.countdownSeconds,
+    required this.countdownFullScreen,
     required this.tickerText,
     required this.tickerSpeed,
     required this.isProgram,
+    this.onSwapPip,
   });
 
   final String title;
@@ -368,9 +353,12 @@ class _LargeBroadcastScreen extends StatefulWidget {
   final String scriptureReference;
   final String lowerThirdName;
   final String lowerThirdTitle;
+  final int countdownSeconds;
+  final bool countdownFullScreen;
   final String tickerText;
   final int tickerSpeed;
   final bool isProgram;
+  final VoidCallback? onSwapPip;
 
   @override
   State<_LargeBroadcastScreen> createState() => _LargeBroadcastScreenState();
@@ -442,6 +430,59 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
     return null;
   }
 
+  Widget _cameraBox(String role, NormalizedRect frame, bool isPip, double scale) {
+    return Positioned(
+      left: frame.x,
+      top: frame.y,
+      width: frame.width,
+      height: frame.height,
+      child: GestureDetector(
+        onTap: isPip ? widget.onSwapPip : null,
+        child: Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: ColoredBox(color: Colors.black, child: NativeCameraView(role: role)),
+            ),
+            Positioned(
+              bottom: 4,
+              right: 6,
+              child: Text(
+                role.toUpperCase(),
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: (9 * scale).clamp(7.0, 11.0),
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: .6,
+                ),
+              ),
+            ),
+            if (isPip)
+              Positioned(
+                top: 4,
+                left: 6,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 5 * scale, vertical: 2 * scale),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'PIP • TAP TO SWAP',
+                    style: TextStyle(
+                      color: const Color(0xFF4ADE80),
+                      fontSize: (8 * scale).clamp(6.0, 10.0),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final borderColor = widget.isProgram ? Colors.red : Colors.blue;
@@ -453,16 +494,26 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
     final scriptureLayer = _layer(LayerKind.scripture);
     final tickerLayer = _layer(LayerKind.ticker);
     final lowerThirdLayer = _layer(LayerKind.lowerThird);
+    final logoLayer = _layer(LayerKind.logo);
+    final countdownLayer = _layer(LayerKind.countdown);
     final showLyrics = lyricsLayer?.visible ?? false;
     final showScripture = scriptureLayer?.visible ?? false;
     final showTicker = tickerLayer?.visible ?? false;
     final showLowerThird = lowerThirdLayer?.visible ?? false;
+    final showLogo = logoLayer?.visible ?? true;
+    final showCountdown = countdownLayer?.visible ?? false;
     final lyrics = showLyrics ? widget.lyricsText.trim() : '';
     final scripture = showScripture ? widget.scriptureText.trim() : '';
     final scriptureReference = showScripture ? widget.scriptureReference.trim() : '';
     final tickerText = widget.tickerText.trim().isEmpty
         ? 'WELCOME TO SUNDAY SERVICE'
         : widget.tickerText;
+
+    final bothVisible = (pastorLayer?.visible ?? false) && (crowdLayer?.visible ?? false);
+    final pastorIsPip = bothVisible &&
+        (pastorLayer!.frame.width * pastorLayer.frame.height) <
+            (crowdLayer!.frame.width * crowdLayer.frame.height);
+    final crowdIsPip = bothVisible && !pastorIsPip;
 
     return Container(
       clipBehavior: Clip.hardEdge,
@@ -490,9 +541,9 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
             fit: StackFit.expand,
             children: [
               if (pastorLayer?.visible ?? false)
-                _LiveCameraLayer(role: 'pastor', frame: _normalizedFrame(pastorLayer!.frame, box)),
+                _cameraBox('pastor', _normalizedFrame(pastorLayer!.frame, box), pastorIsPip, scale),
               if (crowdLayer?.visible ?? false)
-                _LiveCameraLayer(role: 'crowd', frame: _normalizedFrame(crowdLayer!.frame, box)),
+                _cameraBox('crowd', _normalizedFrame(crowdLayer!.frame, box), crowdIsPip, scale),
               Center(
                 child: hasScene && hasLiveLayer
                     ? const SizedBox.shrink()
@@ -516,40 +567,46 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
                         ],
                       ),
               ),
-              Positioned.fill(
-                child: Padding(
-                  padding: EdgeInsets.all(8 * scale),
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: FractionallySizedBox(
-                      widthFactor: .18,
-                      heightFactor: .22,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(5),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(.3), blurRadius: 5)],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(5),
-                          child: Image.asset(
-                            'assets/images/church_logo.png',
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.church, color: Colors.blue, size: 22),
+              if (showLogo)
+                Positioned.fill(
+                  child: Padding(
+                    padding: EdgeInsets.all(8 * scale),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: FractionallySizedBox(
+                        widthFactor: .18,
+                        heightFactor: .22,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(5),
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(.3), blurRadius: 5)],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(5),
+                            child: Image.asset(
+                              'assets/images/church_logo.png',
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.church, color: Colors.blue, size: 22),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
+              if (showCountdown)
+                _CountdownBadge(
+                  seconds: widget.countdownSeconds,
+                  fullScreen: widget.countdownFullScreen,
+                  scale: scale,
+                ),
               if (hasScene && showScripture && scripture.isNotEmpty && scriptureFrame != null)
                 Positioned(
                   left: scriptureFrame.x,
                   top: scriptureFrame.y,
                   width: scriptureFrame.width,
-                  height: scriptureFrame.height,
                   child: Container(
                     margin: EdgeInsets.all(6 * scale),
                     padding: EdgeInsets.symmetric(horizontal: 12 * scale, vertical: 8 * scale),
@@ -558,45 +615,37 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
                       borderRadius: BorderRadius.circular(7),
                       border: Border.all(color: Colors.white.withOpacity(.2)),
                     ),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) => FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.center,
-                        child: SizedBox(
-                          width: constraints.maxWidth,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                scripture,
-                                maxLines: 4,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: (24 * scale).clamp(14.0, 30.0),
-                                  fontWeight: FontWeight.bold,
-                                  shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
-                                ),
-                              ),
-                              if (scriptureReference.isNotEmpty) ...[
-                                SizedBox(height: 4 * scale),
-                                Text(
-                                  scriptureReference,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: (15 * scale).clamp(10.0, 18.0),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ],
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          scripture,
+                          maxLines: 5,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: (20 * scale).clamp(13.0, 26.0),
+                            fontWeight: FontWeight.bold,
+                            height: 1.25,
+                            shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
                           ),
                         ),
-                      ),
+                        if (scriptureReference.isNotEmpty) ...[
+                          SizedBox(height: 4 * scale),
+                          Text(
+                            scriptureReference,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: (13 * scale).clamp(10.0, 17.0),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
@@ -621,7 +670,7 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
                             child: AnimatedBuilder(
                               animation: _prompterAnimation,
                               builder: (context, child) {
-                                final offset = -estHeight +
+                                final offset = windowBox.maxHeight -
                                     _prompterAnimation.value *
                                         (windowBox.maxHeight + estHeight);
                                 return Transform.translate(
@@ -632,7 +681,6 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  SizedBox(height: lineHeight),
                                   for (final stanza in stanzas) ...[
                                     Text(
                                       stanza.trim(),
@@ -811,6 +859,105 @@ class _LargeBroadcastScreenState extends State<_LargeBroadcastScreen>
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _CountdownBadge extends StatefulWidget {
+  const _CountdownBadge({
+    required this.seconds,
+    required this.fullScreen,
+    required this.scale,
+  });
+
+  final int seconds;
+  final bool fullScreen;
+  final double scale;
+
+  @override
+  State<_CountdownBadge> createState() => _CountdownBadgeState();
+}
+
+class _CountdownBadgeState extends State<_CountdownBadge> {
+  late int _remaining = widget.seconds;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _start();
+  }
+
+  void _start() {
+    _timer?.cancel();
+    _remaining = widget.seconds;
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
+      setState(() {
+        if (_remaining > 0) _remaining--;
+      });
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _CountdownBadge oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.seconds != widget.seconds) _start();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _fmt(int s) =>
+      '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.fullScreen) {
+      return Center(
+        child: Text(
+          _fmt(_remaining),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 64 * widget.scale,
+            fontWeight: FontWeight.w900,
+            shadows: const [Shadow(color: Colors.black, blurRadius: 8)],
+          ),
+        ),
+      );
+    }
+    return Positioned(
+      top: 8 * widget.scale,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 10 * widget.scale, vertical: 4 * widget.scale),
+          decoration: BoxDecoration(
+            color: Colors.black87,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: const Color(0xFF4ADE80)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.timer, color: const Color(0xFF4ADE80), size: 14 * widget.scale),
+              SizedBox(width: 6 * widget.scale),
+              Text(
+                _fmt(_remaining),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: (14 * widget.scale).clamp(10.0, 20.0),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
