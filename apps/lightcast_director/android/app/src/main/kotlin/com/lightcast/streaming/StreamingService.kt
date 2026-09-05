@@ -77,6 +77,9 @@ class StreamingService : Service() {
     private val errorCallbacks = ConcurrentHashMap<String, (String) -> Unit>()
     private val registeredRenderers = ConcurrentHashMap<String, CopyOnWriteArraySet<SurfaceViewRenderer>>()
 
+    // 🔥 ADDED: Callback for sending ICE candidates back to Flutter/Dart
+    var onIceCandidateGenerated: ((String, String?, String?, Int) -> Unit)? = null
+
     fun registerVideoRenderer(role: String, renderer: SurfaceViewRenderer) {
       registeredRenderers.getOrPut(role) { CopyOnWriteArraySet() }.add(renderer)
       service?.attachRenderer(role, renderer)
@@ -553,9 +556,9 @@ class StreamingService : Service() {
 
   private fun peerObserver(role: String) = object : PeerConnection.Observer {
     override fun onIceCandidate(candidate: IceCandidate?) {
-      // The camera's signaling path may still use trickle ICE. The current
-      // director server sends complete offers, so no native-to-Dart callback
-      // is needed yet; this hook is intentionally kept for future signaling.
+      // 🔥 FIXED: Send ICE candidates back to Flutter so they reach the camera
+      candidate ?: return
+      onIceCandidateGenerated?.invoke(role, candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
     }
 
     override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) = Unit
